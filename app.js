@@ -1,6 +1,6 @@
 import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText } from './tools.js';
 
-const TABS = ['format', 'text-to-json', 'json-to-text', 'minify', 'compare'];
+const TABS = ['format', 'compare', 'text-to-json', 'json-to-text', 'minify'];
 
 function showTab() {
   const tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : TABS[0];
