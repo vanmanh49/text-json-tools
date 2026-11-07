@@ -55,9 +55,13 @@ function flash(button, text) {
 // Replace a textarea's text through the editing pipeline so Cmd/Ctrl+Z can undo it; fires 'input'.
 function setText(t, text) {
   t.focus();
-  t.select();
-  const ok = text ? document.execCommand('insertText', false, text) : document.execCommand('delete');
-  if (!ok) { t.value = text; t.dispatchEvent(new Event('input')); }
+  let ok = false;
+  // execCommand edits whatever has focus, so only use it when `t` really got focus (not hidden).
+  if (document.activeElement === t) {
+    t.select();
+    ok = text ? document.execCommand('insertText', false, text) : document.execCommand('delete');
+  }
+  if (!ok || t.value !== text) { t.value = text; t.dispatchEvent(new Event('input', { bubbles: true })); }
 }
 
 function download(text, name) {
@@ -66,6 +70,12 @@ function download(text, name) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+
+// Buttons that need content are disabled while there is none. Each tool registers a check here;
+// refreshButtons() runs on every input event and after any code that changes text without one.
+const buttonChecks = [];
+export function refreshButtons() { for (const check of buttonChecks) check(); }
+document.addEventListener('input', refreshButtons);
 
 // Every panel: Copy and Download; editable panels also get Paste and Clear.
 for (const tools of document.querySelectorAll('.tools[data-for]')) {
@@ -85,6 +95,9 @@ for (const tools of document.querySelectorAll('.tools[data-for]')) {
     tools.append(iconButton('clear', 'Clear', () => t.value && setText(t, '')));
   }
   tools.append(iconButton('download', 'Download', () => download(t.value, name)));
+  // Paste is the one button that is useful on an empty panel.
+  const needText = [...tools.querySelectorAll('button')].filter(b => b.getAttribute('aria-label') !== 'Paste');
+  buttonChecks.push(() => { for (const b of needText) b.disabled = !t.value; });
 }
 
 const JSON_TOOLS = { 'text-to-json': textToJson, 'json-to-text': jsonToText, 'minify': minify };
@@ -139,6 +152,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
       left.value = r.left;
       right.value = r.right;
       compare(opts.block);
+      refreshButtons();
     } catch (e) {
       err.textContent = e.message;
     }
@@ -286,6 +300,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     left.value = s.left;
     right.value = s.right;
     compare(Math.max(current, 0));
+    refreshButtons();
   });
   // Typing invalidates the diff; the textarea's own undo covers typed edits, so drop copy history.
   for (const t of [left, right]) t.addEventListener('input', () => {
@@ -314,11 +329,15 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     }
   });
   const swap = $('#swap');
-  swap.replaceWith(Object.assign(iconButton('swap', 'Swap', () => {
+  const swapBtn = Object.assign(iconButton('swap', 'Swap', () => {
     history.push({ left: left.value, right: right.value });
     [left.value, right.value] = [right.value, left.value];
     compare(Math.max(current, 0));
-  }), { id: 'swap', title: 'Swap left and right' }));
+    refreshButtons();
+  }), { id: 'swap', title: 'Swap left and right' });
+  swap.replaceWith(swapBtn);
+  const compareBtn = $('#compare-btn');
+  buttonChecks.push(() => { compareBtn.disabled = swapBtn.disabled = !left.value && !right.value; });
 }
 
 // JSON Format: Postman-style pretty view with colours, line numbers, folding and search.
@@ -409,6 +428,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
       view.replaceChildren();
       countEl.textContent = '';
       if (e) err.textContent = e.message;
+      refreshButtons();
       return;
     }
     const indent = indentSel.value === 'tab' ? '\t' : Number(indentSel.value);
@@ -417,7 +437,15 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     view.style.setProperty('--indent', (indent === '\t' ? 4 : indent) + 'ch');
     build();
     highlight();
+    refreshButtons();
   }
+  const expandBtn = $('#fmt-expand'), collapseBtn = $('#fmt-collapse');
+  buttonChecks.push(() => {
+    const none = !lines.length;
+    expandBtn.disabled = collapseBtn.disabled = search.disabled = none;
+    // Collapse all keeps the root open, so it only helps when something is nested below it.
+    if (!none) collapseBtn.disabled = !view.querySelector('.node .node');
+  });
 
   // Rebuilds (keeping folds), wraps matches in <mark>, and unfolds the nodes that contain them.
   // shortcut: matches within one token only (a key, a value, punctuation), not across tokens.
@@ -464,3 +492,5 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
   // Keep the root open so the top-level keys stay visible, as Postman does.
   $('#fmt-collapse').addEventListener('click', () => view.querySelectorAll('.node .node').forEach(n => toggle(n, true)));
 }
+
+refreshButtons();

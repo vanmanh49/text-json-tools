@@ -29,7 +29,8 @@ There is no linter or bundler. To deploy, upload the folder as it is.
     - Each `<div class="tools" data-for="<textarea id>" data-ext="json|txt">` gets Copy and Download.
     - Paste and Clear are added only when the textarea isn't `readonly`.
     - They are built with `iconButton(icon, label, onClick)` from the `ICONS` map. That map is static SVG markup and is the only `innerHTML` in the app.
-  - Paste and Clear call `setText()`, which uses `execCommand` so the browser's undo still works and an `input` event fires. Don't replace it with `t.value = …`.
+  - Disabled states: each tool pushes a check into `buttonChecks`. `refreshButtons()` runs them on every `input` event. Code that changes text **without** an `input` event must call `refreshButtons()` itself: Compare copy, undo and swap, and the debounced Format `render()`.
+  - Paste and Clear call `setText()`, which uses `execCommand` so the browser's undo still works and an `input` event fires. It uses `execCommand` only when the textarea really has focus; otherwise the command would edit whichever box is focused. Don't replace it with `t.value = …`.
   - Every tool call is wrapped in try/catch, and the error goes to `err.textContent`.
 - **The jsdiff dependency has two copies, and they must stay on the same version:**
   - The browser loads `vendor/diff-9.0.0.js` through the import map in `index.html`.

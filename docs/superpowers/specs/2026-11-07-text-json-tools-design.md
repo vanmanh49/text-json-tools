@@ -117,6 +117,11 @@ Empty input to the three JSON tools returns `''` without an error.
     screen readers.
   - Paste and Clear go through `execCommand('insertText' | 'delete')`, so
     Cmd/Ctrl+Z undoes them and they fire `input` like typing.
+  - Buttons that need content are disabled while there is none: Copy, Clear and
+    Download on an empty panel (Paste stays enabled), Compare and Swap when both
+    sides are empty, and the JSON Format Expand all, Collapse all and search
+    when there is no formatted view. Collapse all is also disabled when nothing
+    is nested below the root.
   - If the browser blocks clipboard reading, the section's error line tells the
     user to press Ctrl/⌘+V instead.
 - **JSON tools (3 tabs):** an input panel, a read-only output panel and an error
