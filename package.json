@@ -1,0 +1,7 @@
+{
+  "name": "text-json-tools",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test" },
+  "devDependencies": { "diff": "9.0.0" }
+}
