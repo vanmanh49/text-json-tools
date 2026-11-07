@@ -54,16 +54,23 @@
     </section>
 
     <section data-tab="compare" hidden>
-      <p class="desc">Line diff two texts, pick left or right per change, copy the merged result.</p>
+      <p class="desc">Compare two texts side by side and copy changes line by line or block by block, like WinMerge.</p>
       <div class="io">
         <label for="left">Left<textarea id="left" spellcheck="false"></textarea></label>
         <label for="right">Right<textarea id="right" spellcheck="false"></textarea></label>
       </div>
       <p class="err" role="alert"></p>
-      <button id="compare-btn" class="primary" type="button">Compare</button>
-      <div id="diff" aria-live="polite"></div>
-      <label for="merged">Merged result<textarea id="merged" readonly spellcheck="false"></textarea></label>
-      <button class="copy" type="button">Copy</button>
+      <div class="toolbar">
+        <button id="compare-btn" class="primary" type="button">Compare</button>
+        <button id="prev-diff" type="button" disabled>‹ Prev diff</button>
+        <button id="next-diff" type="button" disabled>Next diff ›</button>
+        <button id="undo" type="button" disabled>Undo</button>
+        <span id="diff-count" class="muted" role="status"></span>
+        <span class="spacer"></span>
+        <button class="copy" data-side="left" type="button">Copy left text</button>
+        <button class="copy" data-side="right" type="button">Copy right text</button>
+      </div>
+      <div id="diff" class="diff"></div>
     </section>
   </main>
 </body>

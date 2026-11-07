@@ -7,7 +7,7 @@ A static website with four text and JSON utilities. Everything runs in the brows
 | **Text → JSON** | Unescapes a JSON string literal into pretty JSON. It also accepts escaped JSON copied from a log without its outer quotes. | `"{\"name\":\"Ann\"}"` → `{ "name": "Ann" }` |
 | **JSON → Text** | Escapes JSON into a single string literal. | `{ "name": "Ann" }` → `"{\"name\":\"Ann\"}"` |
 | **JSON Simplify** | Minifies formatted JSON onto one line. | multi-line JSON → `{"a":[1,2]}` |
-| **Compare & Merge** | Shows a line-by-line diff of two texts. You pick left or right for each change, then copy the merged result. | |
+| **Compare & Merge** | A WinMerge-style side-by-side diff. Copy one changed line (→ ←) or a whole block (Block ⇒ / ⇐ Block) to the other side. It also has Prev/Next diff and Undo. | |
 
 Each tool has its own link: `#text-to-json`, `#json-to-text`, `#minify`, `#compare`.
 
@@ -37,7 +37,7 @@ Upload the folder as it is to any static host, such as GitHub Pages, Netlify or 
 index.html            page, tabs, import map ("diff" → vendor/diff-9.0.0.js)
 style.css             layout, light/dark theme, mobile
 app.js                DOM wiring only
-tools.js              pure logic: textToJson, jsonToText, minify, diffBlocks, merge
+tools.js              pure logic: textToJson, jsonToText, minify, diffBlocks, applyCopy
 tools.test.js         unit tests
 vendor/diff-9.0.0.js  jsdiff 9.0.0 (BSD-3-Clause), stored in the repo so a blocked CDN can't break the page
 docs/superpowers/     design spec and implementation plan

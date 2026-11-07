@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, merge } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy } from './tools.js';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -55,37 +55,51 @@ test('pure addition and pure deletion', () => {
 });
 test('missing final newline does not swallow the last shared line', () => {
   // regression: raw diffLines treated 'c' and 'c\n' as different lines
-  const blocks = diffBlocks('a\nb\nc', 'a\nB\nc\nd');
-  assert.equal(changes(blocks), 2);
-  assert.equal(merge(blocks, ['left']), 'a\nb\nc\nd');
+  assert.equal(changes(diffBlocks('a\nb\nc', 'a\nB\nc\nd')), 2);
 });
-test('merge defaults to right, all-left gives left', () => {
-  const L = 'a\nb\nc\n', R = 'a\nB\nc\nd\n';
-  const blocks = diffBlocks(L, R);
-  assert.equal(merge(blocks, []), R);
-  assert.equal(merge(blocks, Array(changes(blocks)).fill('left')), L);
+
+test('copy one line to the right replaces that line only', () => {
+  const r = applyCopy('a\nb\nc\nd', 'a\nB\nC\nd', { block: 0, row: 1, dir: 'right' });
+  assert.deepEqual(r, { left: 'a\nb\nc\nd', right: 'a\nB\nc\nd' });
 });
-test('merge picks per block', () => {
-  const blocks = diffBlocks('a\nb\nc\nx\n', 'a\nB\nc\ny\n');
-  assert.equal(merge(blocks, ['left', 'right']), 'a\nb\nc\ny\n');
+test('copy one line to the left', () => {
+  const r = applyCopy('a\nb\nc\nd', 'a\nB\nC\nd', { block: 0, row: 0, dir: 'left' });
+  assert.deepEqual(r, { left: 'a\nB\nc\nd', right: 'a\nB\nC\nd' });
 });
-test('trailing newline mismatch round-trips exactly', () => {
-  const L = 'a\nb', R = 'a\nb\n';
-  const blocks = diffBlocks(L, R);
-  assert.equal(merge(blocks, Array(changes(blocks)).fill('left')), L);
-  assert.equal(merge(blocks, []), R);
+test('copying a line into a gap inserts it', () => {
+  assert.equal(applyCopy('a\nb', 'a', { block: 0, row: 0, dir: 'right' }).right, 'a\nb');
 });
-test('one side empty', () => {
-  const blocks = diffBlocks('', 'x\ny');
-  assert.deepEqual(blocks, [{ type: 'change', left: [''], right: ['x', 'y'] }]);
-  assert.equal(merge(blocks, ['left']), '');
-  assert.equal(merge(blocks, []), 'x\ny');
+test('copying a gap deletes the other side\'s line', () => {
+  assert.equal(applyCopy('a', 'a\nb', { block: 0, row: 0, dir: 'right' }).right, 'a');
 });
-test('CRLF text merges back unchanged', () => {
-  const L = 'a\r\nb\r\n', R = 'a\r\nB\r\n';
-  const blocks = diffBlocks(L, R);
-  assert.equal(merge(blocks, ['left']), L);
-  assert.equal(merge(blocks, []), R);
+test('copy whole block in each direction', () => {
+  const L = 'a\nb\nc', R = 'a\nB\nc\nd';
+  assert.equal(applyCopy(L, R, { block: 0, dir: 'left' }).left, 'a\nB\nc');
+  assert.equal(applyCopy(L, R, { block: 1, dir: 'right' }).right, 'a\nB\nc');
+});
+
+const pairs = [
+  ['a\nb\nc\nx\n', 'a\nB\nc\ny\n'],
+  ['a\nb', 'a\nb\n'],              // trailing newline mismatch
+  ['a\r\nb\r\n', 'a\r\nB\r\n'],    // CRLF
+  ['', 'x\ny'],                    // one side empty
+  ['x\ny', ''],
+];
+for (const dir of ['right', 'left']) {
+  test(`copying every block to the ${dir} makes the sides identical`, () => {
+    for (let [L, R] of pairs) {
+      const want = dir === 'right' ? L : R;
+      for (let i = 0; changes(diffBlocks(L, R)); i++) {
+        assert.ok(i < 10, `no progress on ${JSON.stringify([L, R])}`);
+        ({ left: L, right: R } = applyCopy(L, R, { block: 0, dir }));
+      }
+      assert.equal(L, want);
+      assert.equal(R, want);
+    }
+  });
+}
+test('copy is a no-op on an out-of-range block', () => {
+  assert.deepEqual(applyCopy('a\nb', 'a\nB', { block: 5, dir: 'right' }), { left: 'a\nb', right: 'a\nB' });
 });
 
 test('page loads jsdiff from a local file, not a CDN', async () => {

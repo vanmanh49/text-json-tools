@@ -9,7 +9,7 @@ A public, static website with four browser-only utilities:
 1. **Text → JSON** — unescape a JSON string literal into pretty JSON.
 2. **JSON → text** — escape JSON into a single string literal.
 3. **JSON simplify** — minify formatted JSON to one line.
-4. **Compare & merge** — line diff two texts, pick left/right per change, copy the merged result.
+4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
 
@@ -62,9 +62,14 @@ the UI shows.
   - `{ type: 'change', left: string[], right: string[] }` for a removed run, an
     added run, or a removed run followed by an added run, which together form
     one block. A side with no lines is `[]`.
-- `merge(blocks, choices)` → the chosen lines joined with `'\n'`. `choices[i]` is
-  `'left'` or `'right'` for change block `i` in index order. It defaults to
-  `'right'`. Same blocks are copied as they are.
+- `applyCopy(left, right, { block, row?, dir })` → `{ left, right }`. This is the
+  WinMerge-style copy. `dir: 'right'` copies left → right and `'left'` copies
+  right → left. `block` is the change-block index.
+  - Without `row`, the whole block is copied.
+  - With `row`, only that line of the block is copied. If the target has a line
+    there, it is replaced. If the target has a gap, the line is inserted. If the
+    source has a gap, the target's line is deleted.
+  - An out-of-range `block` changes nothing. The source side is never changed.
 
 Empty input to the three JSON tools returns `''` without an error.
 
@@ -72,12 +77,20 @@ Empty input to the three JSON tools returns `''` without an error.
 
 - **JSON tools (3 tabs):** an input textarea, a read-only output textarea, a Copy
   button, and an error line. Output updates on every `input` event.
-- **Compare:** left and right textareas and a Compare button. The diff view shows
-  same blocks dimmed. Each change block shows its left text (red tint) and right
-  text (green tint) with "Use left" / "Use right" buttons, and the active choice
-  is highlighted. Below it is a read-only merged-result textarea with a Copy
-  button, recomputed on every pick. Editing either input clears the diff until
-  Compare is pressed again.
+- **Compare (WinMerge style):** editable left and right textareas, then a
+  toolbar: Compare, ‹ Prev diff, Next diff ›, Undo, a difference count, Copy
+  left text and Copy right text (clipboard).
+  - Below the toolbar is an aligned side-by-side grid with line numbers, which
+    are hidden under 600px. Unchanged lines are dimmed. Changed lines are tinted
+    red (left) and green (right), and a missing line shows as a hatched gap.
+  - Each change block has a header "Difference N of M" with "Block ⇒" and
+    "⇐ Block" buttons. Each changed line has → and ← buttons.
+  - A copy rewrites the target textarea and re-diffs at once, then keeps focus on
+    the same difference index.
+  - Undo restores the textareas as they were before each copy, any number of
+    times. Typing in a textarea clears the diff and the copy history; the
+    textarea's own undo covers typed edits.
+  - There is no separate merged-result box. The two sides are the result.
 - Copy uses `navigator.clipboard.writeText` and shows "Copied" briefly.
 - Controls are native buttons and labelled textareas, so they work with the
   keyboard and screen readers.
@@ -98,8 +111,13 @@ Empty input to the three JSON tools returns `''` without an error.
   - `jsonToText`: round trip `textToJson(jsonToText(x))` equals pretty `x`;
     invalid input throws.
   - `minify`: multi-line → one line; invalid input throws.
-  - `diffBlocks` + `merge`: identical texts → only same blocks; a replacement, a
-    pure addition, and a pure deletion each give one change block; merge with
-    all-left equals left; merge with all-right (default) equals right.
+  - `diffBlocks`: identical texts give only same blocks. A replacement, a pure
+    addition and a pure deletion each give one change block.
+  - `applyCopy`, one line at a time: replace, insert into a gap, and copying a
+    gap deletes the line.
+  - `applyCopy`, whole blocks: each direction, and an out-of-range block is a
+    no-op.
+  - Copying every block in one direction makes both sides identical, including
+    trailing newlines, CRLF and an empty side.
 - Manual check in a real browser (Playwright) of each tab after implementation,
   including the error display and copy.

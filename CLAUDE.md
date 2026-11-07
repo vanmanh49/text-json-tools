@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A static, browser-only website with four tools: Text → JSON (unescape), JSON → Text (escape), JSON Simplify (minify), and Compare & Merge (line diff with per-block left/right picks). No backend, no build step, no framework. The design spec and plan are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
+A static, browser-only website with four tools: Text → JSON (unescape), JSON → Text (escape), JSON Simplify (minify), and Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right). No backend, no build step, no framework. The design spec and plan are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
 
 ## Commands
 
 ```bash
 npm install                                   # dev only: installs jsdiff for the tests
 npm test                                      # node --test, runs tools.test.js
-node --test --test-name-pattern="merge"       # run tests whose name matches
+node --test --test-name-pattern="copy"        # run tests whose name matches
 python3 -m http.server 8000                   # serve locally; ES modules need http://, not file://
 ```
 
@@ -19,7 +19,7 @@ There is no linter or bundler. To deploy, upload the folder as it is.
 
 ## Architecture
 
-- **`tools.js`** holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `merge`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
+- **`tools.js`** holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
 - **`app.js`** only wires the DOM to those functions:
   - Tabs come from `location.hash`, and each section is a `<section data-tab="...">`.
   - The three JSON tools share one loop over a `{tab: fn}` map. Adding a JSON tool means a new section in `index.html` with `.in` / `.out` / `.err` / `.copy`, plus one map entry.
@@ -36,8 +36,14 @@ There is no linter or bundler. To deploy, upload the folder as it is.
 - Block shapes:
   - Unchanged runs: `{type:'same', lines:string[]}`
   - Changes: `{type:'change', left:string[], right:string[]}`
-- `merge(blocks, choices)` joins the chosen lines with `'\n'`. `choices[i]` belongs to the i-th change block and defaults to `'right'`.
-- Invariant, covered by tests: merging with every block set to left reproduces the left text byte-for-byte, and the same holds for right. This includes trailing newlines and CRLF.
+- `applyCopy(left, right, { block, row?, dir })` → `{ left, right }` is the only way the UI changes text.
+  - It re-diffs, rewrites the target side's slice for change block `block` (the whole block, or one `row`), and joins the lines with `'\n'`.
+  - Copying one row replaces the target line, inserts the line into a gap, or deletes the target line when the source has a gap.
+- Invariant, covered by tests: copying every block in one direction leaves both sides byte-identical. This includes trailing newlines, CRLF and an empty side.
+- Compare UI state in `app.js`:
+  - `history` is a stack of `{left, right}` snapshots taken before each copy, which is what Undo pops.
+  - Typing clears it, because restoring a snapshot would throw away typed text.
+  - After a copy, `compare(index)` re-renders and moves focus back to the same difference.
 - `diffArrays` runs with `{ timeout: 1000 }`. When it gives up it returns `undefined`, and `diffBlocks` throws a "too different" error instead of freezing the tab.
 - The diff view renders user text only through `textContent`. Never use `innerHTML`, because the compared text can contain markup.
 

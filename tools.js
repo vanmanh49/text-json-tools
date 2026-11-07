@@ -41,7 +41,20 @@ export function diffBlocks(left, right) {
   return blocks;
 }
 
-export function merge(blocks, choices) {
+// WinMerge-style copy. dir 'right' copies left → right. `block` is the change-block index;
+// with `row`, only that line of the block: replace it, insert it into a gap, or (copying a gap) delete it.
+export function applyCopy(left, right, { block, row, dir }) {
+  const [src, tgt] = dir === 'right' ? ['left', 'right'] : ['right', 'left'];
   let i = 0;
-  return blocks.flatMap(b => b.type === 'same' ? b.lines : b[choices[i++] ?? 'right']).join('\n');
+  const text = diffBlocks(left, right).flatMap(b => {
+    if (b.type === 'same') return b.lines;
+    if (i++ !== block) return b[tgt];
+    if (row == null) return b[src];
+    const t = b[tgt].slice();
+    if (row < b[src].length && row < t.length) t[row] = b[src][row];
+    else if (row < b[src].length) t.push(b[src][row]);
+    else t.splice(row, 1);
+    return t;
+  }).join('\n');
+  return dir === 'right' ? { left, right: text } : { left: text, right };
 }
