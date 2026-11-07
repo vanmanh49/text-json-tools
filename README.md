@@ -11,6 +11,8 @@ A static website with four text and JSON utilities. Everything runs in the brows
 
 Each tool has its own link: `#text-to-json`, `#json-to-text`, `#minify`, `#compare`.
 
+Every text panel has its own **Copy** and **Download** buttons. Editable panels also have **Paste** and **Clear**, and Cmd/Ctrl+Z undoes them. Compare also has **Swap**, which exchanges the left and right sides.
+
 ## Run locally
 
 ES modules need a web server, so opening `index.html` as a file won't work.

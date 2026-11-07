@@ -26,38 +26,59 @@
     <section data-tab="text-to-json" hidden>
       <p class="desc">Unescape a JSON string literal into pretty JSON.</p>
       <div class="io">
-        <label>Escaped text<textarea class="in" spellcheck="false" placeholder='"{\"name\":\"Ann\",\"age\":3}"'></textarea></label>
-        <label>JSON<textarea class="out" readonly spellcheck="false"></textarea></label>
+        <div class="panel">
+          <div class="panel-head"><label for="t2j-in">Escaped text</label><div class="tools" data-for="t2j-in" data-ext="txt"></div></div>
+          <textarea id="t2j-in" class="in" spellcheck="false" placeholder='"{\"name\":\"Ann\",\"age\":3}"'></textarea>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><label for="t2j-out">JSON</label><div class="tools" data-for="t2j-out" data-ext="json"></div></div>
+          <textarea id="t2j-out" class="out" readonly spellcheck="false"></textarea>
+        </div>
       </div>
       <p class="err" role="alert"></p>
-      <button class="copy" type="button">Copy</button>
     </section>
 
     <section data-tab="json-to-text" hidden>
       <p class="desc">Escape JSON into a single string literal.</p>
       <div class="io">
-        <label>JSON<textarea class="in" spellcheck="false" placeholder='{ "name": "Ann" }'></textarea></label>
-        <label>Escaped text<textarea class="out" readonly spellcheck="false"></textarea></label>
+        <div class="panel">
+          <div class="panel-head"><label for="j2t-in">JSON</label><div class="tools" data-for="j2t-in" data-ext="json"></div></div>
+          <textarea id="j2t-in" class="in" spellcheck="false" placeholder='{ "name": "Ann" }'></textarea>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><label for="j2t-out">Escaped text</label><div class="tools" data-for="j2t-out" data-ext="txt"></div></div>
+          <textarea id="j2t-out" class="out" readonly spellcheck="false"></textarea>
+        </div>
       </div>
       <p class="err" role="alert"></p>
-      <button class="copy" type="button">Copy</button>
     </section>
 
     <section data-tab="minify" hidden>
       <p class="desc">Minify formatted JSON to one line.</p>
       <div class="io">
-        <label>Formatted JSON<textarea class="in" spellcheck="false" placeholder='{&#10;  "name": "Ann"&#10;}'></textarea></label>
-        <label>One-line JSON<textarea class="out" readonly spellcheck="false"></textarea></label>
+        <div class="panel">
+          <div class="panel-head"><label for="min-in">Formatted JSON</label><div class="tools" data-for="min-in" data-ext="json"></div></div>
+          <textarea id="min-in" class="in" spellcheck="false" placeholder='{&#10;  "name": "Ann"&#10;}'></textarea>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><label for="min-out">One-line JSON</label><div class="tools" data-for="min-out" data-ext="json"></div></div>
+          <textarea id="min-out" class="out" readonly spellcheck="false"></textarea>
+        </div>
       </div>
       <p class="err" role="alert"></p>
-      <button class="copy" type="button">Copy</button>
     </section>
 
     <section data-tab="compare" hidden>
       <p class="desc">Compare two texts side by side and copy changes line by line or block by block, like WinMerge.</p>
       <div class="io">
-        <label for="left">Left<textarea id="left" spellcheck="false"></textarea></label>
-        <label for="right">Right<textarea id="right" spellcheck="false"></textarea></label>
+        <div class="panel">
+          <div class="panel-head"><label for="left">Left</label><div class="tools" data-for="left" data-ext="txt"></div></div>
+          <textarea id="left" spellcheck="false"></textarea>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><label for="right">Right</label><div class="tools" data-for="right" data-ext="txt"></div></div>
+          <textarea id="right" spellcheck="false"></textarea>
+        </div>
       </div>
       <p class="err" role="alert"></p>
       <div class="toolbar">
@@ -66,9 +87,7 @@
         <button id="next-diff" type="button" disabled>Next diff ›</button>
         <button id="undo" type="button" disabled>Undo</button>
         <span id="diff-count" class="muted" role="status"></span>
-        <span class="spacer"></span>
-        <button class="copy" data-side="left" type="button">Copy left text</button>
-        <button class="copy" data-side="right" type="button">Copy right text</button>
+        <button id="swap" type="button" aria-label="Swap left and right" title="Swap left and right"></button>
       </div>
       <div id="diff" class="diff"></div>
     </section>

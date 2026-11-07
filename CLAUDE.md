@@ -22,7 +22,14 @@ There is no linter or bundler. To deploy, upload the folder as it is.
 - **`tools.js`** holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
 - **`app.js`** only wires the DOM to those functions:
   - Tabs come from `location.hash`, and each section is a `<section data-tab="...">`.
-  - The three JSON tools share one loop over a `{tab: fn}` map. Adding a JSON tool means a new section in `index.html` with `.in` / `.out` / `.err` / `.copy`, plus one map entry.
+  - The three JSON tools share one loop over a `{tab: fn}` map. Adding a JSON tool means two things:
+    - a new section in `index.html` with an `.in` panel, an `.out` panel and an `.err` line
+    - one entry in the map
+  - Panel buttons are generated, not written in HTML:
+    - Each `<div class="tools" data-for="<textarea id>" data-ext="json|txt">` gets Copy and Download.
+    - Paste and Clear are added only when the textarea isn't `readonly`.
+    - They are built with `iconButton(icon, label, onClick)` from the `ICONS` map. That map is static SVG markup and is the only `innerHTML` in the app.
+  - Paste and Clear call `setText()`, which uses `execCommand` so the browser's undo still works and an `input` event fires. Don't replace it with `t.value = …`.
   - Every tool call is wrapped in try/catch, and the error goes to `err.textContent`.
 - **The jsdiff dependency has two copies, and they must stay on the same version:**
   - The browser loads `vendor/diff-9.0.0.js` through the import map in `index.html`.

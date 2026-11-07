@@ -75,11 +75,24 @@ Empty input to the three JSON tools returns `''` without an error.
 
 ## UI
 
-- **JSON tools (3 tabs):** an input textarea, a read-only output textarea, a Copy
-  button, and an error line. Output updates on every `input` event.
-- **Compare (WinMerge style):** editable left and right textareas, then a
-  toolbar: Compare, ‹ Prev diff, Next diff ›, Undo, a difference count, Copy
-  left text and Copy right text (clipboard).
+- **Panels (every tool):** each textarea sits in a `.panel` with a header row:
+  its label on the left and icon buttons on the right.
+  - Every panel has **Copy** and **Download**. Download saves a `.json` file for
+    JSON panels and a `.txt` file otherwise, named after the label (for example
+    `one-line-json.json`).
+  - Editable panels also have **Paste** and **Clear**.
+  - Under 600px the buttons show only their icons. The label still shows while a
+    button flashes feedback such as "Copied", and `aria-label` keeps the name for
+    screen readers.
+  - Paste and Clear go through `execCommand('insertText' | 'delete')`, so
+    Cmd/Ctrl+Z undoes them and they fire `input` like typing.
+  - If the browser blocks clipboard reading, the section's error line tells the
+    user to press Ctrl/⌘+V instead.
+- **JSON tools (3 tabs):** an input panel, a read-only output panel and an error
+  line. Output updates on every `input` event.
+- **Compare (WinMerge style):** editable Left and Right panels, then a toolbar:
+  Compare, ‹ Prev diff, Next diff ›, Undo, a difference count, and **Swap**.
+  Swap exchanges the sides, re-diffs, and can be undone.
   - Below the toolbar is an aligned side-by-side grid with line numbers, which
     are hidden under 600px. Unchanged lines are dimmed. Changed lines are tinted
     red (left) and green (right), and a missing line shows as a hatched gap.
@@ -91,7 +104,6 @@ Empty input to the three JSON tools returns `''` without an error.
     times. Typing in a textarea clears the diff and the copy history; the
     textarea's own undo covers typed edits.
   - There is no separate merged-result box. The two sides are the result.
-- Copy uses `navigator.clipboard.writeText` and shows "Copied" briefly.
 - Controls are native buttons and labelled textareas, so they work with the
   keyboard and screen readers.
 

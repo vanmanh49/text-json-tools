@@ -13,15 +13,73 @@ function showTab() {
 addEventListener('hashchange', showTab);
 showTab();
 
-export async function copy(text, button) {
-  const label = (button.dataset.label ??= button.textContent); // survives a second click within 1.5s
-  try {
-    await navigator.clipboard.writeText(text);
-    button.textContent = 'Copied';
-  } catch {
-    button.textContent = 'Copy failed';
+// Static icon markup (never user text), stroke icons in the Lucide style.
+const ICONS = {
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  paste: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+  clear: '<path d="M18 6 6 18M6 6l12 12"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+  swap: '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
+};
+
+export function iconButton(icon, label, onClick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'icon-btn';
+  b.title = label;
+  b.setAttribute('aria-label', label); // the visible label is hidden on phones
+  b.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[icon]}</svg><span class="label"></span>`;
+  b.querySelector('.label').textContent = label;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+// Briefly replace a button's label (shown even on phones, where labels are otherwise hidden).
+function flash(button, text) {
+  const label = button.querySelector('.label');
+  label.dataset.label ??= label.textContent;
+  label.textContent = text;
+  button.classList.add('flashing');
+  clearTimeout(button._flash);
+  button._flash = setTimeout(() => {
+    label.textContent = label.dataset.label;
+    button.classList.remove('flashing');
+  }, 1500);
+}
+
+// Replace a textarea's text through the editing pipeline so Cmd/Ctrl+Z can undo it; fires 'input'.
+function setText(t, text) {
+  t.focus();
+  t.select();
+  const ok = text ? document.execCommand('insertText', false, text) : document.execCommand('delete');
+  if (!ok) { t.value = text; t.dispatchEvent(new Event('input')); }
+}
+
+function download(text, name) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+// Every panel: Copy and Download; editable panels also get Paste and Clear.
+for (const tools of document.querySelectorAll('.tools[data-for]')) {
+  const t = document.getElementById(tools.dataset.for);
+  const err = t.closest('section').querySelector('.err');
+  const label = tools.closest('.panel-head').querySelector('label').textContent;
+  const name = `${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.${tools.dataset.ext}`; // e.g. one-line-json.json
+  tools.append(iconButton('copy', 'Copy', async e => {
+    const b = e.currentTarget;
+    try { await navigator.clipboard.writeText(t.value); flash(b, 'Copied'); } catch { flash(b, 'Copy failed'); }
+  }));
+  if (!t.readOnly) {
+    tools.append(iconButton('paste', 'Paste', async () => {
+      try { setText(t, await navigator.clipboard.readText()); }
+      catch { err.textContent = 'The browser blocked clipboard access. Click the box and press Ctrl+V (⌘V on Mac).'; }
+    }));
+    tools.append(iconButton('clear', 'Clear', () => t.value && setText(t, '')));
   }
-  setTimeout(() => (button.textContent = label), 1500);
+  tools.append(iconButton('download', 'Download', () => download(t.value, name)));
 }
 
 const JSON_TOOLS = { 'text-to-json': textToJson, 'json-to-text': jsonToText, 'minify': minify };
@@ -40,7 +98,6 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
       err.textContent = e.message;
     }
   });
-  section.querySelector('.copy').addEventListener('click', e => copy(output.value, e.currentTarget));
 }
 
 // Compare & merge, WinMerge style: both sides stay editable and copies rewrite them.
@@ -171,7 +228,10 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     count.textContent = '';
     prevBtn.disabled = nextBtn.disabled = true;
   });
-  for (const b of section.querySelectorAll('.copy')) {
-    b.addEventListener('click', e => copy(b.dataset.side === 'left' ? left.value : right.value, e.currentTarget));
-  }
+  const swap = $('#swap');
+  swap.replaceWith(Object.assign(iconButton('swap', 'Swap', () => {
+    history.push({ left: left.value, right: right.value });
+    [left.value, right.value] = [right.value, left.value];
+    compare(Math.max(current, 0));
+  }), { id: 'swap', title: 'Swap left and right' }));
 }
