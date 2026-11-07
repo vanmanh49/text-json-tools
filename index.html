@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Text &amp; JSON Tools</title>
+  <meta name="description" content="Free in-browser tools: unescape text to JSON, escape JSON to text, minify JSON, and compare and merge text. Nothing leaves your browser.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">{"imports":{"diff":"https://cdn.jsdelivr.net/npm/diff@9.0.0/+esm"}}</script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Text &amp; JSON Tools</h1>
+    <p class="tagline">Runs entirely in your browser. Nothing is uploaded.</p>
+    <nav>
+      <a href="#text-to-json">Text → JSON</a>
+      <a href="#json-to-text">JSON → Text</a>
+      <a href="#minify">JSON Simplify</a>
+      <a href="#compare">Compare &amp; Merge</a>
+    </nav>
+  </header>
+
+  <main>
+    <section data-tab="text-to-json" hidden>
+      <p class="desc">Unescape a JSON string literal into pretty JSON.</p>
+      <div class="io">
+        <label>Escaped text<textarea class="in" spellcheck="false" placeholder='"{\"name\":\"Ann\",\"age\":3}"'></textarea></label>
+        <label>JSON<textarea class="out" readonly spellcheck="false"></textarea></label>
+      </div>
+      <p class="err" role="alert"></p>
+      <button class="copy" type="button">Copy</button>
+    </section>
+
+    <section data-tab="json-to-text" hidden>
+      <p class="desc">Escape JSON into a single string literal.</p>
+      <div class="io">
+        <label>JSON<textarea class="in" spellcheck="false" placeholder='{ "name": "Ann" }'></textarea></label>
+        <label>Escaped text<textarea class="out" readonly spellcheck="false"></textarea></label>
+      </div>
+      <p class="err" role="alert"></p>
+      <button class="copy" type="button">Copy</button>
+    </section>
+
+    <section data-tab="minify" hidden>
+      <p class="desc">Minify formatted JSON to one line.</p>
+      <div class="io">
+        <label>Formatted JSON<textarea class="in" spellcheck="false" placeholder='{&#10;  "name": "Ann"&#10;}'></textarea></label>
+        <label>One-line JSON<textarea class="out" readonly spellcheck="false"></textarea></label>
+      </div>
+      <p class="err" role="alert"></p>
+      <button class="copy" type="button">Copy</button>
+    </section>
+
+    <section data-tab="compare" hidden></section>
+  </main>
+</body>
+</html>

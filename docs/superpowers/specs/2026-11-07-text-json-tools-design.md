@@ -22,7 +22,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 - Static files only, deployable to GitHub Pages / Netlify as-is. No build step.
 - Plain HTML + CSS + JS (ES modules).
 - One runtime dependency: `jsdiff` (`diff@9.0.0`), loaded in the browser from
-  `https://cdn.jsdelivr.net/npm/diff@9.0.0/libesm/index.js` through an import map
+  `https://cdn.jsdelivr.net/npm/diff@9.0.0/+esm` through an import map
   that maps the bare specifier `"diff"`. Node tests resolve the same `"diff"` from
   `node_modules` (devDependency, same version).
 - Works on desktop and phone widths, light and dark theme.

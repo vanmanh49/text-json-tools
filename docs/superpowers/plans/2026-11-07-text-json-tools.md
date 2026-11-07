@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - No build step. Static files deployable to GitHub Pages / Netlify as they are.
-- The only dependency is `diff@9.0.0`. The browser loads it from `https://cdn.jsdelivr.net/npm/diff@9.0.0/libesm/index.js` via an import map, and Node gets it as a devDependency of the same version.
+- The only dependency is `diff@9.0.0`. The browser loads it from `https://cdn.jsdelivr.net/npm/diff@9.0.0/+esm` via an import map, and Node gets it as a devDependency of the same version.
 - `package.json` sets `"type": "module"` and `"test": "node --test"`.
 - No backend, accounts, history, share links, file upload, or analytics.
 - Works at phone width (16px side gutter, no horizontal page scroll), light and dark theme.
@@ -193,7 +193,7 @@ git commit -m "Add line diff blocks and merge"
 
 - [ ] **Step 1: Write `index.html`**
 
-Title "Text & JSON Tools", viewport meta, `<link rel="stylesheet" href="style.css">`, and the import map `{"imports":{"diff":"https://cdn.jsdelivr.net/npm/diff@9.0.0/libesm/index.js"}}` **before** `<script type="module" src="app.js">`. Write the sections from the DOM contract. Leave the compare section empty for Task 4. Each section starts with a one-line description of the tool, using the spec's Goal wording.
+Title "Text & JSON Tools", viewport meta, `<link rel="stylesheet" href="style.css">`, and the import map `{"imports":{"diff":"https://cdn.jsdelivr.net/npm/diff@9.0.0/+esm"}}` **before** `<script type="module" src="app.js">`. Write the sections from the DOM contract. Leave the compare section empty for Task 4. Each section starts with a one-line description of the tool, using the spec's Goal wording.
 
 - [ ] **Step 2: Write `style.css`**
 
