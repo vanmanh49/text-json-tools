@@ -56,8 +56,12 @@ function flash(button, text) {
 function setText(t, text) {
   t.focus();
   let ok = false;
+  // execCommand('insertText') cost grows ~quadratically with newlines (0.4s at 800 lines, minutes at
+  // 20k), while 'delete' stays fast. So long multi-line text is set directly.
+  // shortcut: that direct set is not Cmd/Ctrl+Z-undoable; add a panel-level undo if users need it for big pastes.
+  const cheap = !text || text.split('\n', 202).length <= 201; // ≤ 200 newlines
   // execCommand edits whatever has focus, so only use it when `t` really got focus (not hidden).
-  if (document.activeElement === t) {
+  if (document.activeElement === t && cheap) {
     t.select();
     ok = text ? document.execCommand('insertText', false, text) : document.execCommand('delete');
   }

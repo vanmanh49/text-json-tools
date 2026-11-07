@@ -117,6 +117,10 @@ Empty input to the three JSON tools returns `''` without an error.
     screen readers.
   - Paste and Clear go through `execCommand('insertText' | 'delete')`, so
     Cmd/Ctrl+Z undoes them and they fire `input` like typing.
+  - Exception: Paste of text with more than 200 lines sets the value directly.
+    `insertText` slows down roughly quadratically with line count (2.6s for
+    2,000 lines), so that kind of paste can't be undone with Cmd/Ctrl+Z.
+    Clear's `delete` stays fast at any size, so it is always undoable.
   - Buttons that need content are disabled while there is none: Copy, Clear and
     Download on an empty panel (Paste stays enabled), Compare and Swap when both
     sides are empty, and the JSON Format Expand all, Collapse all and search

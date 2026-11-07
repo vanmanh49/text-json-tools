@@ -30,7 +30,8 @@ There is no linter or bundler. To deploy, upload the folder as it is.
     - Paste and Clear are added only when the textarea isn't `readonly`.
     - They are built with `iconButton(icon, label, onClick)` from the `ICONS` map. That map is static SVG markup and is the only `innerHTML` in the app.
   - Disabled states: each tool pushes a check into `buttonChecks`. `refreshButtons()` runs them on every `input` event. Code that changes text **without** an `input` event must call `refreshButtons()` itself: Compare copy, undo and swap, and the debounced Format `render()`.
-  - Paste and Clear call `setText()`, which uses `execCommand` so the browser's undo still works and an `input` event fires. It uses `execCommand` only when the textarea really has focus; otherwise the command would edit whichever box is focused. Don't replace it with `t.value = …`.
+  - Paste and Clear call `setText()`, which uses `execCommand` so the browser's undo still works and an `input` event fires. It uses `execCommand` only when the textarea really has focus; otherwise the command would edit whichever box is focused. It also skips `insertText` for text with more than 200 newlines, because its cost grows roughly quadratically with line count (2.6s for 2,000 lines, minutes for 20,000). `delete` and undo stay linear.
+  - When testing in a browser after editing JS, open a fresh tab or hard-reload. `?v=` on the page URL does not refresh the cached `app.js`/`tools.js` modules, and stale JS once looked like a regression. Don't replace it with `t.value = …`.
   - Every tool call is wrapped in try/catch, and the error goes to `err.textContent`.
 - **The jsdiff dependency has two copies, and they must stay on the same version:**
   - The browser loads `vendor/diff-9.0.0.js` through the import map in `index.html`.
