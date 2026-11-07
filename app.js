@@ -107,6 +107,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
   const $ = sel => section.querySelector(sel);
   const left = $('#left'), right = $('#right'), diff = $('#diff'), err = $('.err');
   const prevBtn = $('#prev-diff'), nextBtn = $('#next-diff'), undoBtn = $('#undo'), count = $('#diff-count');
+  const identical = $('#identical');
   const history = [];
   let current = -1;
 
@@ -153,6 +154,14 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
   function render(blocks) {
     diff.replaceChildren();
     const total = blocks.filter(b => b.type === 'change').length;
+    prevBtn.disabled = nextBtn.disabled = !total;
+    // Identical sides: an inline notice instead of a grid with nothing to merge.
+    identical.hidden = total > 0;
+    if (!total) {
+      identical.textContent = left.value || right.value ? '✓ The left and right texts are identical.' : 'Both sides are empty. Paste or type text to compare.';
+      count.textContent = '';
+      return 0;
+    }
     let nl = 1, nr = 1, k = 0;
     for (const b of blocks) {
       if (b.type === 'same') {
@@ -181,8 +190,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
       }
       diff.append(box);
     }
-    count.textContent = total ? `${total} difference${total > 1 ? 's' : ''}` : 'No differences';
-    prevBtn.disabled = nextBtn.disabled = !total;
+    count.textContent = `${total} difference${total > 1 ? 's' : ''}`;
     return total;
   }
 
@@ -196,6 +204,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
       if (focusIndex != null && total) go(Math.min(focusIndex, total - 1), false);
     } catch (e) {
       diff.replaceChildren();
+      identical.hidden = true;
       count.textContent = '';
       err.textContent = e.message;
     }
@@ -225,6 +234,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     history.length = 0;
     undoBtn.disabled = true;
     diff.replaceChildren();
+    identical.hidden = true;
     count.textContent = '';
     prevBtn.disabled = nextBtn.disabled = true;
   });

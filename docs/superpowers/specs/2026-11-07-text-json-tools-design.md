@@ -131,6 +131,13 @@ Empty input to the three JSON tools returns `''` without an error.
     times. Typing in a textarea clears the diff and the copy history; the
     textarea's own undo covers typed edits.
   - There is no separate merged-result box. The two sides are the result.
+  - When the sides are identical, the grid is not shown. An inline notice (not a
+    dialog) appears below the toolbar instead: "✓ The left and right texts are
+    identical." The same notice appears after the last difference is copied
+    across. If both sides are empty, the notice says "Both sides are empty.
+    Paste or type text to compare."
+  - Prev and Next are disabled while the notice shows. Undo stays available.
+    Typing hides the notice.
 - Controls are native buttons and labelled textareas, so they work with the
   keyboard and screen readers.
 

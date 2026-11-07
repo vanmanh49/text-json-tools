@@ -166,3 +166,8 @@ button:disabled { opacity: 0.45; cursor: default; }
   .pretty .line { grid-template-columns: 2.6em 1.3em minmax(0, 1fr); }
   input[type="search"] { width: 100%; }
 }
+
+.notice {
+  margin: 0 0 12px; padding: 12px 14px; border-radius: 6px;
+  background: var(--add); border: 1px solid var(--border); color: var(--text);
+}
