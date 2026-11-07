@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize } from './tools.js';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -172,4 +172,47 @@ test('splitSame parts always rejoin to the input', () => {
     const { head, hidden, tail } = splitSame(nums(n), { first, last });
     assert.deepEqual([...head, ...hidden, ...tail], nums(n));
   }
+});
+
+test('jsonStatus: empty and valid input', () => {
+  assert.deepEqual(jsonStatus(''), { empty: true, ok: false, lines: 0, bytes: 0 });
+  assert.deepEqual(jsonStatus('  \n'), { empty: true, ok: false, lines: 2, bytes: 3 });
+  assert.deepEqual(jsonStatus('{"a":1}'), { empty: false, ok: true, lines: 1, bytes: 7 });
+});
+test('jsonStatus counts UTF-8 bytes, not characters', () => {
+  assert.equal(jsonStatus('"😀ế"').bytes, 9);
+});
+test('jsonStatus locates a parse error (V8 message with position and line/column)', () => {
+  const st = jsonStatus('{\n "a": 1,\n}');
+  assert.equal(st.ok, false);
+  assert.deepEqual([st.error.pos, st.error.line, st.error.col], [11, 3, 1]);
+  assert.ok(st.error.message.length > 0);
+});
+const text3 = '{\n "a": 1,\n}';
+test('errorLocation reads Firefox, position-only and Safari messages', () => {
+  assert.deepEqual(errorLocation('JSON.parse: expected double-quoted property name at line 3 column 1 of the JSON data', text3), { pos: 11, line: 3, col: 1 });
+  assert.deepEqual(errorLocation('Unexpected token } in JSON at position 11', text3), { pos: 11, line: 3, col: 1 });
+  assert.deepEqual(errorLocation("JSON Parse error: Expected '}'", text3), {});
+});
+test('formatSize boundaries', () => {
+  assert.equal(formatSize(0), '0 B');
+  assert.equal(formatSize(1023), '1023 B');
+  assert.equal(formatSize(1024), '1.0 KB');
+  assert.equal(formatSize(12.4 * 1024), '12.4 KB');
+  assert.equal(formatSize(1024 * 1024), '1.0 MB');
+});
+test('errorLocation reads V8 "Unexpected token" messages, which quote a snippet instead of a position', () => {
+  const msg = t => { try { JSON.parse(t); } catch (e) { return e.message; } };
+  const t1 = '{\n  "a": 1,\n  "b": [1, 2,]\n}';             // "...snippet" form
+  assert.deepEqual(errorLocation(msg(t1), t1), { pos: 25, line: 3, col: 14 });
+  const t2 = '[1,2,]' + ' '.repeat(40);                       // "snippet..." form
+  assert.equal(errorLocation(msg(t2), t2).pos, 5);
+  const t3 = '{"a": tru}';                                     // short text quoted whole
+  assert.equal(errorLocation(msg(t3), t3).pos, 9);
+  const t4 = '{"a":';                                          // unexpected end
+  assert.deepEqual(errorLocation(msg(t4), t4), { pos: 5, line: 1, col: 6 });
+});
+test('jsonStatus gives a line for a trailing-comma error in Chrome/Node', () => {
+  const st = jsonStatus('{\n  "a": 1,\n  "b": [1, 2,]\n}');
+  assert.equal(st.error.line, 3);
 });

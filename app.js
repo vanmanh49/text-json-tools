@@ -1,10 +1,13 @@
 import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame } from './tools.js';
+import { iconButton, refreshButtons, onRefresh, initPanels } from './panels.js';
 
 const TABS = ['format', 'compare', 'text-to-json', 'json-to-text', 'minify'];
 
 function showTab() {
   const tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : TABS[0];
   for (const s of document.querySelectorAll('section[data-tab]')) s.hidden = s.dataset.tab !== tab;
+  // Workspace tools fill the screen and scroll inside their panels; Compare scrolls the page.
+  document.body.classList.toggle('app', tab !== 'compare');
   for (const a of document.querySelectorAll('nav a')) {
     if (a.hash === '#' + tab) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
@@ -18,92 +21,6 @@ const toTop = document.getElementById('to-top');
 addEventListener('scroll', () => { toTop.hidden = scrollY < 400; }, { passive: true });
 toTop.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
 
-// Static icon markup (never user text), stroke icons in the Lucide style.
-const ICONS = {
-  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
-  paste: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
-  clear: '<path d="M18 6 6 18M6 6l12 12"/>',
-  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
-  swap: '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
-};
-
-export function iconButton(icon, label, onClick) {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'icon-btn';
-  b.title = label;
-  b.setAttribute('aria-label', label); // the visible label is hidden on phones
-  b.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[icon]}</svg><span class="label"></span>`;
-  b.querySelector('.label').textContent = label;
-  b.addEventListener('click', onClick);
-  return b;
-}
-
-// Briefly replace a button's label (shown even on phones, where labels are otherwise hidden).
-function flash(button, text) {
-  const label = button.querySelector('.label');
-  label.dataset.label ??= label.textContent;
-  label.textContent = text;
-  button.classList.add('flashing');
-  clearTimeout(button._flash);
-  button._flash = setTimeout(() => {
-    label.textContent = label.dataset.label;
-    button.classList.remove('flashing');
-  }, 1500);
-}
-
-// Replace a textarea's text through the editing pipeline so Cmd/Ctrl+Z can undo it; fires 'input'.
-function setText(t, text) {
-  t.focus();
-  let ok = false;
-  // execCommand('insertText') cost grows ~quadratically with newlines (0.4s at 800 lines, minutes at
-  // 20k), while 'delete' stays fast. So long multi-line text is set directly.
-  // shortcut: that direct set is not Cmd/Ctrl+Z-undoable; add a panel-level undo if users need it for big pastes.
-  const cheap = !text || text.split('\n', 202).length <= 201; // ≤ 200 newlines
-  // execCommand edits whatever has focus, so only use it when `t` really got focus (not hidden).
-  if (document.activeElement === t && cheap) {
-    t.select();
-    ok = text ? document.execCommand('insertText', false, text) : document.execCommand('delete');
-  }
-  if (!ok || t.value !== text) { t.value = text; t.dispatchEvent(new Event('input', { bubbles: true })); }
-}
-
-function download(text, name) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: name });
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
-// Buttons that need content are disabled while there is none. Each tool registers a check here;
-// refreshButtons() runs on every input event and after any code that changes text without one.
-const buttonChecks = [];
-export function refreshButtons() { for (const check of buttonChecks) check(); }
-document.addEventListener('input', refreshButtons);
-
-// Every panel: Copy and Download; editable panels also get Paste and Clear.
-for (const tools of document.querySelectorAll('.tools[data-for]')) {
-  const t = document.getElementById(tools.dataset.for);
-  const err = t.closest('section').querySelector('.err');
-  const label = tools.closest('.panel-head').firstElementChild.textContent;
-  const name = `${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.${tools.dataset.ext}`; // e.g. one-line-json.json
-  tools.append(iconButton('copy', 'Copy', async e => {
-    const b = e.currentTarget;
-    try { await navigator.clipboard.writeText(t.value); flash(b, 'Copied'); } catch { flash(b, 'Copy failed'); }
-  }));
-  if (t.tagName === 'TEXTAREA' && !t.readOnly) {
-    tools.append(iconButton('paste', 'Paste', async () => {
-      try { setText(t, await navigator.clipboard.readText()); }
-      catch { err.textContent = 'The browser blocked clipboard access. Click the box and press Ctrl+V (⌘V on Mac).'; }
-    }));
-    tools.append(iconButton('clear', 'Clear', () => t.value && setText(t, '')));
-  }
-  tools.append(iconButton('download', 'Download', () => download(t.value, name)));
-  // Paste is the one button that is useful on an empty panel.
-  const needText = [...tools.querySelectorAll('button')].filter(b => b.getAttribute('aria-label') !== 'Paste');
-  buttonChecks.push(() => { for (const b of needText) b.disabled = !t.value; });
-}
-
 const JSON_TOOLS = { 'text-to-json': textToJson, 'json-to-text': jsonToText, 'minify': minify };
 
 for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
@@ -111,13 +28,15 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
   const input = section.querySelector('.in');
   const output = section.querySelector('.out');
   const err = section.querySelector('.err');
+  // JSON input panels show parse errors (with line and column) in their status bar instead.
+  const statusShowsErrors = section.querySelector(`.tools[data-for="${input.id}"]`).dataset.ext === 'json';
   input.addEventListener('input', () => {
     try {
       output.value = fn(input.value);
       err.textContent = '';
     } catch (e) {
       output.value = '';
-      err.textContent = e.message;
+      err.textContent = statusShowsErrors ? '' : e.message;
     }
   });
 }
@@ -130,6 +49,14 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
   const left = $('#left'), right = $('#right'), diff = $('#diff'), err = $('.err');
   const prevBtn = $('#prev-diff'), nextBtn = $('#next-diff'), undoBtn = $('#undo'), count = $('#diff-count');
   const identical = $('#identical'), locbar = $('#locbar'), toolbar = $('.toolbar');
+  const inputs = $('.inputs'), foldSummary = $('#fold-summary');
+  const lineCount = t => (t.value ? t.value.split('\n').length : 0).toLocaleString();
+  // After a compare with differences, the inputs fold into a slim bar so the diff gets the screen.
+  function fold(on) {
+    inputs.classList.toggle('folded', on);
+    if (on) foldSummary.textContent = `Left · ${lineCount(left)} lines    Right · ${lineCount(right)} lines`;
+  }
+  $('#edit-texts').addEventListener('click', () => { fold(false); left.focus(); });
   const history = [];
   let current = -1;
 
@@ -273,6 +200,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     try {
       err.textContent = '';
       const total = render(diffBlocks(left.value, right.value));
+      fold(total > 0);
       undoBtn.disabled = !history.length;
       current = -1;
       if (focusIndex != null && total) go(Math.min(focusIndex, total - 1), false);
@@ -341,7 +269,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
   }), { id: 'swap', title: 'Swap left and right' });
   swap.replaceWith(swapBtn);
   const compareBtn = $('#compare-btn');
-  buttonChecks.push(() => { compareBtn.disabled = swapBtn.disabled = !left.value && !right.value; });
+  onRefresh(() => { compareBtn.disabled = swapBtn.disabled = !left.value && !right.value; });
 }
 
 // JSON Format: Postman-style pretty view with colours, line numbers, folding and search.
@@ -431,7 +359,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
       view.value = '';
       view.replaceChildren();
       countEl.textContent = '';
-      if (e) err.textContent = e.message;
+      // the input panel's status bar shows the parse error with its line and column
       refreshButtons();
       return;
     }
@@ -444,7 +372,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     refreshButtons();
   }
   const expandBtn = $('#fmt-expand'), collapseBtn = $('#fmt-collapse');
-  buttonChecks.push(() => {
+  onRefresh(() => {
     const none = !lines.length;
     expandBtn.disabled = collapseBtn.disabled = search.disabled = none;
     // Collapse all keeps the root open, so it only helps when something is nested below it.
@@ -497,4 +425,17 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
   $('#fmt-collapse').addEventListener('click', () => view.querySelectorAll('.node .node').forEach(n => toggle(n, true)));
 }
 
-refreshButtons();
+// One sample per editable panel for the empty state's "Try a sample".
+const PERSON = { name: 'Ann Nguyen', age: 31, active: true, email: 'ann@example.com', tags: ['dev', 'ops'], address: { city: 'Hanoi', geo: { lat: 21.03, lng: 105.85 } }, manager: null };
+const CONFIG_A = 'server:\n  host: example.com\n  port: 8080\n  timeout: 30\nlogging:\n  level: info\n  file: app.log\nfeatures:\n  - search\n  - export\n';
+const CONFIG_B = 'server:\n  host: example.com\n  port: 9090\n  timeout: 30\n  retries: 3\nlogging:\n  level: debug\n  file: app.log\nfeatures:\n  - search\n  - export\n  - share\n';
+initPanels({
+  samples: {
+    'fmt-in': JSON.stringify(PERSON),
+    't2j-in': JSON.stringify(JSON.stringify(PERSON)),
+    'j2t-in': JSON.stringify(PERSON, null, 2),
+    'min-in': JSON.stringify(PERSON, null, 2),
+    left: { left: CONFIG_A, right: CONFIG_B },
+    right: { left: CONFIG_A, right: CONFIG_B },
+  },
+});

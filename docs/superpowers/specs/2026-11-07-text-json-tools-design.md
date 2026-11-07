@@ -92,6 +92,24 @@ Empty input to the three JSON tools returns `''` without an error.
 
 ## UI
 
+- **Shell:**
+  - A top bar holds the `{ }` brand, the tool tabs as a segmented control, a theme switch (System → Light → Dark, remembered) and a ⚙ menu.
+  - The menu has "Remember my text in this browser" (on by default) and "Clear all panels", which needs a second click to confirm.
+  - Format and the three JSON tools fill the screen (`body.app`), and their panels scroll inside. Compare scrolls the page.
+  - Under 700px the panels stack and the tabs scroll sideways.
+- **Look:**
+  - IBM Plex Sans for the interface and IBM Plex Mono for editors, both kept in `vendor/fonts`.
+  - The palette comes from JSON's token colours.
+  - Panel buttons are borderless icon buttons. The loud element is the status bar's ok/error edge.
+- **Every panel:**
+  - A status bar shows the line count and size. JSON panels add "✓ Valid JSON", or "✗ Line L, column C: message" with a **Go to error** link that selects the bad character and scrolls to it.
+  - Error positions come from `errorLocation()`. It handles V8 positions, V8 "Unexpected token" snippets, Firefox line/column, and Safari (no position).
+  - Editable panels show an empty state (Paste, Try a sample, "or drop a file here") and accept a dropped file of up to 25 MB, read locally.
+  - Output panels show "The result appears here as you type." and have a **Send to…** menu that fills another tool's input and switches tab.
+- **Remembered text:**
+  - Editable text is saved to `localStorage` (`tjt:text:<id>`, debounced) and restored on load.
+  - Text over 2 MB isn't saved; its status bar says so.
+- **Compare:** after a compare with differences, the inputs fold into a "Left · N lines  Right · M lines · Edit texts" bar.
 - **JSON Format:** a toolbar with Indent (2 spaces, 4 spaces or Tab), "Sort keys
   A→Z", Expand all, Collapse all, a search box and a match count. Below it, the
   JSON input panel sits next to the Pretty panel.

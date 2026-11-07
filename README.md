@@ -12,6 +12,13 @@ A static website with five text and JSON utilities. Everything runs in the brows
 
 Each tool has its own link: `#format` (the default), `#compare`, `#text-to-json`, `#json-to-text`, `#minify`.
 
+The app works like a small editor:
+- The panels fill the screen.
+- Each panel's status bar shows lines, size and whether the JSON is valid. **Go to error** jumps to the problem.
+- Empty panels offer **Paste**, **Try a sample** and drag-and-drop of a file. Files are read in the browser and never uploaded.
+- Results can be sent to another tool with **Send to…**.
+- Your text is remembered in this browser (you can turn this off with ⚙). The theme can be System, Light or Dark.
+
 Every text panel has its own **Copy** and **Download** buttons. Editable panels also have **Paste** and **Clear**, and Cmd/Ctrl+Z undoes them. Compare also has **Swap**, which exchanges the left and right sides.
 
 ## Run locally
@@ -32,7 +39,7 @@ npm test      # node --test
 
 ## Deploy
 
-Upload the folder as it is to any static host, such as GitHub Pages, Netlify or Vercel. There is no build step. The page needs only `index.html`, `style.css`, `app.js`, `tools.js` and `vendor/`.
+Upload the folder as it is to any static host, such as GitHub Pages, Netlify or Vercel. There is no build step. The page needs only `index.html`, `style.css`, `app.js`, `panels.js`, `tools.js` and `vendor/`.
 
 ## Project layout
 
@@ -42,7 +49,9 @@ style.css             layout, light/dark theme, mobile
 app.js                DOM wiring only
 tools.js              pure logic: textToJson, jsonToText, minify, diffBlocks, applyCopy
 tools.test.js         unit tests
+panels.js             panel chrome: header buttons, status bar, empty state, file drop, Send to, remembered text, theme
 vendor/diff-9.0.0.js  jsdiff 9.0.0 (BSD-3-Clause), stored in the repo so a blocked CDN can't break the page
+vendor/fonts/         IBM Plex Sans/Mono woff2 subsets (SIL OFL 1.1, see OFL.txt)
 docs/superpowers/     design spec and implementation plan
 ```
 

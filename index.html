@@ -5,22 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Text &amp; JSON Tools</title>
   <meta name="description" content="Free in-browser tools: format JSON with colours and folding, unescape text to JSON, escape JSON to text, minify JSON, and compare and merge text. Nothing leaves your browser.">
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233446C2'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='17' font-weight='700' text-anchor='middle' fill='white'%3E%7B%7D%3C/text%3E%3C/svg%3E">
+  <link rel="preload" href="vendor/fonts/ibm-plex-sans-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/ibm-plex-mono-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+  <script>
+    // Apply the saved theme before first paint so the page doesn't flash the wrong colours.
+    try { const t = localStorage.getItem('tjt:theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}
+  </script>
   <link rel="stylesheet" href="style.css">
   <script type="importmap">{"imports":{"diff":"./vendor/diff-9.0.0.js"}}</script>
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Text &amp; JSON Tools</h1>
-    <p class="tagline">Runs entirely in your browser. Nothing is uploaded.</p>
-    <nav>
+  <header class="topbar">
+    <a class="brand" href="#format" title="Runs entirely in your browser. Nothing is uploaded.">
+      <span class="mark" aria-hidden="true">{ }</span>
+      <span class="brand-name">Text &amp; JSON Tools</span>
+    </a>
+    <nav aria-label="Tools">
       <a href="#format">JSON Format</a>
       <a href="#compare">Compare &amp; Merge</a>
       <a href="#text-to-json">Text → JSON</a>
       <a href="#json-to-text">JSON → Text</a>
       <a href="#minify">JSON Minify</a>
     </nav>
+    <div class="top-actions">
+      <button id="theme" class="icon-btn" type="button"></button>
+      <details class="menu">
+        <summary class="icon-btn" aria-label="Settings" title="Settings">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </summary>
+        <div class="menu-body">
+          <label class="check"><input type="checkbox" id="remember"> Remember my text in this browser</label>
+          <p class="menu-note">Text stays on this device only. Turn this off on a shared computer.</p>
+          <button id="clear-all" type="button">Clear all panels</button>
+          <p class="menu-note">Runs entirely in your browser. Nothing is uploaded.</p>
+        </div>
+      </details>
+    </div>
   </header>
 
   <main>
@@ -39,7 +61,7 @@
       <div class="io">
         <div class="panel">
           <div class="panel-head"><label for="fmt-in">JSON</label><div class="tools" data-for="fmt-in" data-ext="json"></div></div>
-          <textarea id="fmt-in" spellcheck="false" placeholder='{"name":"Ann","tags":["a","b"],"address":{"city":"Hanoi"}}'></textarea>
+          <textarea id="fmt-in" spellcheck="false"></textarea>
         </div>
         <div class="panel">
           <div class="panel-head"><span id="fmt-out-label">Pretty</span><div class="tools" data-for="fmt-out" data-ext="json"></div></div>
@@ -54,7 +76,7 @@
       <div class="io">
         <div class="panel">
           <div class="panel-head"><label for="t2j-in">Escaped text</label><div class="tools" data-for="t2j-in" data-ext="txt"></div></div>
-          <textarea id="t2j-in" class="in" spellcheck="false" placeholder='"{\"name\":\"Ann\",\"age\":3}"'></textarea>
+          <textarea id="t2j-in" class="in" spellcheck="false"></textarea>
         </div>
         <div class="panel">
           <div class="panel-head"><label for="t2j-out">JSON</label><div class="tools" data-for="t2j-out" data-ext="json"></div></div>
@@ -69,7 +91,7 @@
       <div class="io">
         <div class="panel">
           <div class="panel-head"><label for="j2t-in">JSON</label><div class="tools" data-for="j2t-in" data-ext="json"></div></div>
-          <textarea id="j2t-in" class="in" spellcheck="false" placeholder='{ "name": "Ann" }'></textarea>
+          <textarea id="j2t-in" class="in" spellcheck="false"></textarea>
         </div>
         <div class="panel">
           <div class="panel-head"><label for="j2t-out">Escaped text</label><div class="tools" data-for="j2t-out" data-ext="txt"></div></div>
@@ -84,7 +106,7 @@
       <div class="io">
         <div class="panel">
           <div class="panel-head"><label for="min-in">Formatted JSON</label><div class="tools" data-for="min-in" data-ext="json"></div></div>
-          <textarea id="min-in" class="in" spellcheck="false" placeholder='{&#10;  "name": "Ann"&#10;}'></textarea>
+          <textarea id="min-in" class="in" spellcheck="false"></textarea>
         </div>
         <div class="panel">
           <div class="panel-head"><label for="min-out">One-line JSON</label><div class="tools" data-for="min-out" data-ext="json"></div></div>
@@ -96,6 +118,11 @@
 
     <section data-tab="compare" hidden>
       <p class="desc">Compare two texts side by side and copy changes line by line or block by block, like WinMerge.</p>
+      <div class="inputs">
+      <div class="fold-bar">
+        <span id="fold-summary"></span>
+        <button id="edit-texts" type="button">Edit texts</button>
+      </div>
       <div class="io">
         <div class="panel">
           <div class="panel-head"><label for="left">Left</label><div class="tools" data-for="left" data-ext="txt"></div></div>
@@ -105,6 +132,7 @@
           <div class="panel-head"><label for="right">Right</label><div class="tools" data-for="right" data-ext="txt"></div></div>
           <textarea id="right" spellcheck="false"></textarea>
         </div>
+      </div>
       </div>
       <p class="err" role="alert"></p>
       <div class="toolbar">
