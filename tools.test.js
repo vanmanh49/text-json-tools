@@ -87,3 +87,19 @@ test('CRLF text merges back unchanged', () => {
   assert.equal(merge(blocks, ['left']), L);
   assert.equal(merge(blocks, []), R);
 });
+
+test('page loads jsdiff from a local file, not a CDN', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const map = JSON.parse(html.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1]);
+  const src = map.imports.diff;
+  assert.match(src, /^\.\//, 'import map must point at a local path so a blocked CDN cannot blank the page');
+  const mod = await import(new URL(src, import.meta.url));
+  assert.equal(typeof mod.diffArrays, 'function');
+});
+test('very different large texts fail fast instead of freezing', () => {
+  const rand = n => Array.from({ length: n }, () => Math.random().toString(36).slice(2)).join('\n');
+  const t = Date.now();
+  assert.throws(() => diffBlocks(rand(10000), rand(10000)), /too different/);
+  assert.ok(Date.now() - t < 3000, `took ${Date.now() - t}ms`);
+});

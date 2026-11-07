@@ -28,7 +28,10 @@ export function minify(s) {
 // Diff whole lines (split on \n, rejoined with \n) so a missing final newline or CRLF never alters the merge.
 export function diffBlocks(left, right) {
   const blocks = [];
-  for (const p of diffArrays(left.split('\n'), right.split('\n'))) {
+  // jsdiff returns undefined when it gives up; without a cap, two large unrelated texts freeze the tab
+  const parts = diffArrays(left.split('\n'), right.split('\n'), { timeout: 1000 });
+  if (!parts) throw new Error('These texts are too different to compare quickly. Try smaller pieces.');
+  for (const p of parts) {
     if (!p.value.length) continue;
     if (!p.added && !p.removed) { blocks.push({ type: 'same', lines: p.value }); continue; }
     let b = blocks.at(-1);
