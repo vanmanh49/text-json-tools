@@ -51,6 +51,10 @@ There is no linter or bundler. To deploy, upload the folder as it is.
   - `history` is a stack of `{left, right}` snapshots taken before each copy, which is what Undo pops.
   - Typing clears it, because restoring a snapshot would throw away typed text.
   - After a copy, `compare(index)` re-renders and moves focus back to the same difference.
+- Long diffs:
+  - `render()` collapses unchanged runs with `splitSame` into a hidden `.hidden-lines` box behind an "⋯ N unchanged lines" button. Line-number counters still advance through hidden rows.
+  - `updateLocbar()` places the ticks from each `.change` element's `offsetTop / diff.offsetHeight`, so it must re-run whenever the diff's layout changes. It does after render, after an expand, through the ResizeObserver, and on resize. `.diff` is `position: relative` so that `offsetTop` is measured from the diff.
+  - The keyboard shortcuts check `document.activeElement` (not `e.target`) so they don't fire while typing; on macOS, Option+arrows move by word in a textarea.
 - `diffArrays` runs with `{ timeout: 1000 }`. When it gives up it returns `undefined`, and `diffBlocks` throws a "too different" error instead of freezing the tab.
 - The diff view renders user text only through `textContent`. Never use `innerHTML`, because the compared text can contain markup.
 

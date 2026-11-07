@@ -1,4 +1,4 @@
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame } from './tools.js';
 
 const TABS = ['format', 'compare', 'text-to-json', 'json-to-text', 'minify'];
 
@@ -12,6 +12,11 @@ function showTab() {
 }
 addEventListener('hashchange', showTab);
 showTab();
+
+// Floating "back to top" button for long pages (all tools).
+const toTop = document.getElementById('to-top');
+addEventListener('scroll', () => { toTop.hidden = scrollY < 400; }, { passive: true });
+toTop.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
 
 // Static icon markup (never user text), stroke icons in the Lucide style.
 const ICONS = {
@@ -107,7 +112,7 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
   const $ = sel => section.querySelector(sel);
   const left = $('#left'), right = $('#right'), diff = $('#diff'), err = $('.err');
   const prevBtn = $('#prev-diff'), nextBtn = $('#next-diff'), undoBtn = $('#undo'), count = $('#diff-count');
-  const identical = $('#identical');
+  const identical = $('#identical'), locbar = $('#locbar'), toolbar = $('.toolbar');
   const history = [];
   let current = -1;
 
@@ -163,10 +168,25 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
       return 0;
     }
     let nl = 1, nr = 1, k = 0;
-    for (const b of blocks) {
+    blocks.forEach((b, bi) => {
       if (b.type === 'same') {
-        for (const line of b.lines) diff.append(row('same', nl++, line, nr++, line));
-        continue;
+        // Long unchanged runs collapse to 3 lines of context, with a row that expands them.
+        const { head, hidden, tail } = splitSame(b.lines, { first: bi === 0, last: bi === blocks.length - 1 });
+        for (const line of head) diff.append(row('same', nl++, line, nr++, line));
+        if (hidden.length) {
+          const box = el('div', 'hidden-lines');
+          box.hidden = true;
+          for (const line of hidden) box.append(row('same', nl++, line, nr++, line));
+          const more = btn(`⋯ ${hidden.length} unchanged lines`, `Show ${hidden.length} unchanged lines`, () => {
+            box.hidden = false;
+            more.remove();
+            updateLocbar();
+          });
+          more.className = 'expand';
+          diff.append(more, box);
+        }
+        for (const line of tail) diff.append(row('same', nl++, line, nr++, line));
+        return;
       }
       const block = k++;
       const box = el('div', 'change');
@@ -189,10 +209,46 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
         box.append(row('changed', hasL ? nl++ : null, hasL ? b.left[r] : null, hasR ? nr++ : null, hasR ? b.right[r] : null, act));
       }
       diff.append(box);
-    }
+    });
     count.textContent = `${total} difference${total > 1 ? 's' : ''}`;
+    updateLocbar();
     return total;
   }
+
+  // Location bar (like WinMerge's location pane): one tick per difference, scaled to the diff's
+  // height, plus a box showing which part of the diff is on screen. Click a tick to jump there.
+  function updateLocbar() {
+    locbar.replaceChildren();
+    const H = diff.offsetHeight;
+    if (!H) return;
+    const top = toolbar.offsetHeight;
+    locbar.style.top = top + 'px';
+    locbar.style.height = Math.min(innerHeight - top - 16, H) + 'px'; // never taller than the diff itself
+    changeEls().forEach((c, i) => {
+      const t = el('span', 'tick' + (i === current ? ' current' : ''));
+      t.style.top = (c.offsetTop / H) * 100 + '%';
+      t.style.height = Math.max((c.offsetHeight / H) * 100, 0.8) + '%';
+      t.addEventListener('click', e => { e.stopPropagation(); go(i); });
+      locbar.append(t);
+    });
+    locbar.append(el('span', 'view'));
+    updateView();
+  }
+  function updateView() {
+    const v = locbar.querySelector('.view');
+    if (!v) return;
+    const r = diff.getBoundingClientRect();
+    const top = Math.max(0, -r.top + toolbar.offsetHeight), bottom = Math.min(r.height, innerHeight - r.top);
+    v.style.top = (top / r.height) * 100 + '%';
+    v.style.height = Math.max(0, (bottom - top) / r.height) * 100 + '%';
+  }
+  locbar.addEventListener('click', e => {
+    const r = locbar.getBoundingClientRect(), d = diff.getBoundingClientRect();
+    scrollTo({ top: scrollY + d.top + ((e.clientY - r.top) / r.height) * d.height - innerHeight / 2, behavior: 'smooth' });
+  });
+  addEventListener('scroll', updateView, { passive: true });
+  addEventListener('resize', () => updateLocbar());
+  new ResizeObserver(() => updateLocbar()).observe(diff);
 
   // Re-diff and keep the view on difference `focusIndex` (used after a copy).
   function compare(focusIndex) {
@@ -215,6 +271,8 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     if (!els.length) return;
     current = (i + els.length) % els.length;
     els.forEach((e, j) => e.classList.toggle('current', j === current));
+    locbar.querySelectorAll('.tick').forEach((t, j) => t.classList.toggle('current', j === current));
+    count.textContent = `${current + 1} of ${els.length}`;
     if (scroll) els[current].scrollIntoView({ block: 'center', behavior: 'smooth' });
     els[current].querySelector('button').focus({ preventScroll: !scroll });
   }
@@ -237,6 +295,23 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     identical.hidden = true;
     count.textContent = '';
     prevBtn.disabled = nextBtn.disabled = true;
+  });
+  // WinMerge-style shortcuts, ignored while typing in a box (Option+arrows move by word there on macOS).
+  document.addEventListener('keydown', e => {
+    if (section.hidden || document.activeElement?.closest('textarea, input, select')) return;
+    const n = changeEls().length;
+    if (e.altKey && !e.ctrlKey && !e.metaKey && n) {
+      const act = {
+        ArrowDown: () => go(current + 1),
+        ArrowUp: () => go(current - 1),
+        ArrowRight: () => copyChange({ block: Math.max(current, 0), dir: 'right' }),
+        ArrowLeft: () => copyChange({ block: Math.max(current, 0), dir: 'left' }),
+      }[e.key];
+      if (act) { e.preventDefault(); act(); }
+    } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && history.length) {
+      e.preventDefault();
+      undoBtn.click();
+    }
   });
   const swap = $('#swap');
   swap.replaceWith(Object.assign(iconButton('swap', 'Swap', () => {

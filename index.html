@@ -109,15 +109,20 @@
       <p class="err" role="alert"></p>
       <div class="toolbar">
         <button id="compare-btn" class="primary" type="button">Compare</button>
-        <button id="prev-diff" type="button" disabled>‹ Prev diff</button>
-        <button id="next-diff" type="button" disabled>Next diff ›</button>
-        <button id="undo" type="button" disabled>Undo</button>
+        <button id="prev-diff" type="button" title="Previous difference (Alt+↑)" disabled>‹ Prev<span class="wide"> diff</span></button>
+        <button id="next-diff" type="button" title="Next difference (Alt+↓). Alt+→ / Alt+← copy it to the right / left" disabled>Next<span class="wide"> diff</span> ›</button>
         <span id="diff-count" class="muted" role="status"></span>
+        <button id="undo" type="button" title="Undo last copy (Ctrl/⌘+Z)" disabled>Undo</button>
         <button id="swap" type="button" aria-label="Swap left and right" title="Swap left and right"></button>
       </div>
       <p id="identical" class="notice" role="status" hidden></p>
-      <div id="diff" class="diff"></div>
+      <div class="diff-wrap">
+        <div id="diff" class="diff"></div>
+        <div id="locbar" class="locbar" aria-hidden="true"></div>
+      </div>
+      <p class="muted hint-keys">Shortcuts: Alt+↓ / Alt+↑ next / previous difference · Alt+→ / Alt+← copy it right / left · Ctrl/⌘+Z undo</p>
     </section>
   </main>
+  <button id="to-top" class="to-top" type="button" aria-label="Back to top" hidden>↑ Top</button>
 </body>
 </html>

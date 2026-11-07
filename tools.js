@@ -95,3 +95,12 @@ export function linesText(lines, indent = 2) {
   const ind = typeof indent === 'number' ? ' '.repeat(indent) : indent;
   return lines.map(l => ind.repeat(l.depth) + l.parts.map(p => p[1]).join('')).join('\n');
 }
+
+// Collapse a long unchanged run in the diff view, keeping `ctx` lines of context next to changes.
+// `first`/`last`: the run starts or ends the file, so it only needs context on its inner side.
+// Never hides fewer than 2 lines (a "1 unchanged line" toggle would cost as much space as the line).
+export function splitSame(lines, { first = false, last = false } = {}, ctx = 3) {
+  const headN = first ? 0 : ctx, tailN = last ? 0 : ctx;
+  if (lines.length - headN - tailN < 2) return { head: lines, hidden: [], tail: [] };
+  return { head: lines.slice(0, headN), hidden: lines.slice(headN, lines.length - tailN), tail: lines.slice(lines.length - tailN) };
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame } from './tools.js';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -153,4 +153,23 @@ test('every fold ends on its matching closing line', () => {
 test('jsonLines can sort keys A→Z at every depth, including numeric-looking keys', () => {
   const text = linesText(jsonLines({ b: 1, a: { d: 1, c: [{ z: 1, y: 2 }] }, 10: 0, 2: 0 }, 2, true), 2);
   assert.equal(text.replace(/\s+/g, ''), '{"10":0,"2":0,"a":{"c":[{"y":2,"z":1}],"d":1},"b":1}');
+});
+
+const nums = n => Array.from({ length: n }, (_, i) => String(i));
+test('splitSame keeps 3 lines of context on each side of a middle run', () => {
+  assert.deepEqual(splitSame(nums(10), {}), { head: ['0', '1', '2'], hidden: ['3', '4', '5', '6'], tail: ['7', '8', '9'] });
+});
+test('splitSame shows only trailing context before the first change and leading context after the last', () => {
+  assert.deepEqual(splitSame(nums(10), { first: true }), { head: [], hidden: nums(7), tail: ['7', '8', '9'] });
+  assert.deepEqual(splitSame(nums(10), { last: true }), { head: ['0', '1', '2'], hidden: nums(10).slice(3), tail: [] });
+});
+test('splitSame never hides a single line', () => {
+  assert.deepEqual(splitSame(nums(7), {}), { head: nums(7), hidden: [], tail: [] });
+  assert.equal(splitSame(nums(8), {}).hidden.length, 2);
+});
+test('splitSame parts always rejoin to the input', () => {
+  for (let n = 0; n <= 12; n++) for (const first of [false, true]) for (const last of [false, true]) {
+    const { head, hidden, tail } = splitSame(nums(n), { first, last });
+    assert.deepEqual([...head, ...hidden, ...tail], nums(n));
+  }
 });

@@ -5,7 +5,7 @@ A static website with five text and JSON utilities. Everything runs in the brows
 | Tool | What it does | Example |
 |------|--------------|---------|
 | **JSON Format** | A Postman-style pretty view with syntax colours, line numbers, ▾/▸ folding, indent of 2, 4 or Tab, sort keys A→Z, search, and Expand/Collapse all. | `{"a":[1,2]}` → coloured, foldable tree |
-| **Compare & Merge** | A WinMerge-style side-by-side diff. Copy one changed line (→ ←) or a whole block (Block ⇒ / ⇐ Block) to the other side. It also has Prev/Next diff and Undo. | |
+| **Compare & Merge** | A WinMerge-style side-by-side diff. Copy one changed line (→ ←) or a whole block (Block ⇒ / ⇐ Block) to the other side. It also has Prev/Next diff, Undo, a sticky toolbar, collapsed unchanged lines, a clickable location bar and keyboard shortcuts (Alt+↓/↑ next/previous, Alt+→/← copy, Ctrl/⌘+Z undo). | |
 | **Text → JSON** | Unescapes a JSON string literal into pretty JSON. It also accepts escaped JSON copied from a log without its outer quotes. | `"{\"name\":\"Ann\"}"` → `{ "name": "Ann" }` |
 | **JSON → Text** | Escapes JSON into a single string literal. | `{ "name": "Ann" }` → `"{\"name\":\"Ann\"}"` |
 | **JSON Minify** | Minifies formatted JSON onto one line. | multi-line JSON → `{"a":[1,2]}` |

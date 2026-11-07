@@ -98,7 +98,19 @@ button.primary { background: var(--accent); color: var(--accent-text); border-co
 
 /* Compare & merge (WinMerge style) */
 .muted { color: var(--muted); font-size: 0.9rem; }
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px;
+  /* stays on screen while scrolling long content */
+  position: sticky; top: 0; z-index: 5; padding: 8px 0; background: var(--bg);
+}
+@media (max-width: 600px) {
+  /* one scrollable row on phones so the sticky bar doesn't eat the screen */
+  .toolbar { flex-wrap: nowrap; overflow-x: auto; }
+  .toolbar > * { flex: none; }
+  .toolbar { gap: 6px; }
+  .toolbar button { padding: 6px 10px; }
+  .toolbar .wide { display: none; }
+}
 .toolbar .spacer { flex: 1; }
 button:disabled { opacity: 0.45; cursor: default; }
 
@@ -164,10 +176,37 @@ button:disabled { opacity: 0.45; cursor: default; }
 .pretty mark.current { outline: 2px solid var(--accent); }
 @media (max-width: 600px) {
   .pretty .line { grid-template-columns: 2.6em 1.3em minmax(0, 1fr); }
-  input[type="search"] { width: 100%; }
+  input[type="search"] { width: 11em; }
 }
 
 .notice {
   margin: 0 0 12px; padding: 12px 14px; border-radius: 6px;
   background: var(--add); border: 1px solid var(--border); color: var(--text);
+}
+
+/* Compare: location bar, collapsed context, shortcuts hint, back-to-top */
+.diff-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 14px; gap: 6px; align-items: start; }
+.diff-wrap:has(> .diff:empty), .diff-wrap:has(> .diff:empty) + .hint-keys { display: none; }
+.diff { position: relative; }
+.locbar {
+  position: sticky; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+}
+.locbar .tick { position: absolute; left: 1px; right: 1px; min-height: 3px; background: #e0a000; border-radius: 1px; }
+.locbar .tick.current { background: var(--accent); }
+.locbar .view { position: absolute; left: -1px; right: -1px; border: 1.5px solid var(--muted); border-radius: 3px; pointer-events: none; }
+.diff .expand {
+  display: block; width: 100%; padding: 3px 8px; border: 0; border-radius: 0;
+  border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border);
+  background: var(--bg); color: var(--muted); font: inherit; font-size: 0.8rem; text-align: center;
+}
+.diff .expand:hover { color: var(--text); }
+.hint-keys { margin: 8px 0 0; font-size: 0.8rem; }
+.to-top {
+  position: fixed; right: 16px; bottom: 16px; z-index: 10; box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  background: var(--accent); color: var(--accent-text); border-color: var(--accent);
+}
+@media (max-width: 600px) {
+  .diff-wrap { grid-template-columns: minmax(0, 1fr) 10px; gap: 4px; }
+  .hint-keys { display: none; }
 }

@@ -80,6 +80,10 @@ the UI shows.
   - Empty `{}` and `[]` stay on one line.
   - With `sort`, object keys are ordered A→Z with `localeCompare` at every depth.
     This includes numeric-looking keys, which a plain object would reorder.
+- `splitSame(lines, { first, last }, ctx = 3)` → `{ head, hidden, tail }`. It
+  keeps `ctx` lines next to a change: only the trailing ones when the run starts
+  the file, and only the leading ones when it ends it. It never hides fewer than
+  2 lines.
 - `linesText(lines, indent)` joins the lines with the indent string (a number of
   spaces, or `'\t'`). Unsorted, the result is byte-identical to
   `JSON.stringify(value, null, indent)`.
@@ -138,6 +142,26 @@ Empty input to the three JSON tools returns `''` without an error.
     Paste or type text to compare."
   - Prev and Next are disabled while the notice shows. Undo stays available.
     Typing hides the notice.
+  - **Long content:**
+    - The toolbar is sticky at the top of the screen. On phones it is a single
+      row that scrolls sideways, with the labels shortened to "‹ Prev" and
+      "Next ›".
+    - The counter reads "N differences", and changes to "3 of 12" once you move
+      to a difference.
+    - Unchanged runs collapse to 3 lines of context next to each change
+      (`splitSame`). Each collapsed run shows as a "⋯ N unchanged lines" row
+      that expands it. Line numbers stay true.
+    - A sticky location bar sits to the right of the diff, scaled to the diff's
+      height. It has one tick per difference (the current one in the accent
+      colour) and a box showing the part of the diff that is on screen. Clicking
+      a tick jumps to that difference, and clicking elsewhere on the bar scrolls
+      to that point.
+    - Keyboard: Alt+↓ / Alt+↑ go to the next or previous difference, Alt+→ /
+      Alt+← copy the current difference to the right or left, and Ctrl/⌘+Z
+      undoes the last copy. These are ignored while focus is in a textarea,
+      input or select.
+- A floating "↑ Top" button appears once the page is scrolled more than 400px
+  (all tools). The JSON Format toolbar is sticky too.
 - Controls are native buttons and labelled textareas, so they work with the
   keyboard and screen readers.
 
