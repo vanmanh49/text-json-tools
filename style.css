@@ -311,3 +311,8 @@ body.app .pretty { min-height: 0; }
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; }
 }
+
+/* JWT Decode: time claims under the decoded JSON */
+.jwt-times { margin: 10px 0 0; padding: 10px 14px 10px 32px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.jwt-times li + li { margin-top: 2px; }
+.jwt-times li.bad { color: var(--error); }

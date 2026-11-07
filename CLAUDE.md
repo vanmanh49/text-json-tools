@@ -19,16 +19,19 @@ There is no linter or bundler. To deploy, upload the folder as it is.
 
 ## Architecture
 
-- **`tools.js`** holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `jsonLines`, `linesText`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
+- **`tools.js`** holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `jsonLines`, `linesText`, `normalizeJson`, `decodeJwt`, `jwtTimeNotes`, `base64Encode`/`base64Decode`, `urlEncode`/`urlDecode`, `jsonStatus`/`errorLocation`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
 - **`panels.js`** holds the chrome shared by every panel:
   - It exports `iconButton`, `setText`, `onRefresh` / `refreshButtons` and `initPanels({ samples })`. `app.js` calls `initPanels` last, after every tool has added its listeners, because restoring saved text fires `input`.
   - It wraps each panel's textarea (or the Pretty `<div>`) in an `.editor` and appends a `.status`. Whether a panel counts as JSON comes from its `.tools[data-ext="json"]`.
   - It reads the status for that text from `jsonStatus()` / `errorLocation()` in `tools.js`, and debounces the update.
   - Send to, drop, samples, Paste and Clear all go through `setText()`.
+  - Textareas with `data-private` (the JWT token box) are never written to storage, whatever the "remember" setting says. Keep that attribute on any box that may hold secrets.
   - Storage: `tjt:settings` (`{ remember }`), `tjt:theme`, `tjt:text:<textarea id>`. Every access goes through the try/catch `store` helper. An inline script in `<head>` applies the theme before first paint.
 - **`app.js`** only wires the DOM to those functions:
   - Tabs come from `location.hash`, and each section is a `<section data-tab="...">`. `showTab()` adds `body.app` to every tool except Compare. That class makes the section fill the screen so its panels scroll inside; Compare scrolls the page because of its sticky toolbar and location bar.
   - Panels whose input is JSON show parse errors in the status bar, so the tool's `.err` line stays empty for them.
+  - The JSON tools, JWT and Encode/Decode share one loop over a `{tab: fn}` map. Encode/Decode's function picks the encoder from `#enc-mode`, and changing the mode re-fires `input`.
+  - Compare as JSON (`#json-mode`) rewrites both textareas with `normalizeJson` before `compare()` and pushes the originals onto `history`. Every diff and copy afterwards works on that visible, normalized text.
   - The three JSON tools share one loop over a `{tab: fn}` map. Adding a JSON tool means two things:
     - a new section in `index.html` with an `.in` panel, an `.out` panel and an `.err` line
     - one entry in the map

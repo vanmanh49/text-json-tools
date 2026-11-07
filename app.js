@@ -1,7 +1,8 @@
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame,
+  normalizeJson, jsonStatus, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode } from './tools.js';
 import { iconButton, refreshButtons, onRefresh, initPanels } from './panels.js';
 
-const TABS = ['format', 'compare', 'text-to-json', 'json-to-text', 'minify'];
+const TABS = ['format', 'compare', 'text-to-json', 'json-to-text', 'minify', 'jwt', 'encode'];
 
 function showTab() {
   const tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : TABS[0];
@@ -21,7 +22,17 @@ const toTop = document.getElementById('to-top');
 addEventListener('scroll', () => { toTop.hidden = scrollY < 400; }, { passive: true });
 toTop.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
 
-const JSON_TOOLS = { 'text-to-json': textToJson, 'json-to-text': jsonToText, 'minify': minify };
+const ENCODERS = { 'base64-encode': base64Encode, 'base64-decode': base64Decode, 'url-encode': urlEncode, 'url-decode': urlDecode };
+const encMode = document.getElementById('enc-mode');
+const decodeJwtText = s => {
+  const d = decodeJwt(s);
+  return d ? JSON.stringify({ header: d.header, payload: d.payload }, null, 2) : '';
+};
+const JSON_TOOLS = {
+  'text-to-json': textToJson, 'json-to-text': jsonToText, 'minify': minify,
+  'jwt': decodeJwtText,
+  'encode': s => ENCODERS[encMode.value](s),
+};
 
 for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
   const section = document.querySelector(`section[data-tab="${tab}"]`);
@@ -40,6 +51,19 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     }
   });
 }
+
+// JWT: plain-English times for iat / nbf / exp under the decoded JSON.
+{
+  const input = document.getElementById('jwt-in'), list = document.getElementById('jwt-times');
+  input.addEventListener('input', () => {
+    let notes = [];
+    try { notes = jwtTimeNotes(decodeJwt(input.value)?.payload); } catch { /* the error line already explains it */ }
+    list.replaceChildren(...notes.map(n => Object.assign(document.createElement('li'), { textContent: n, className: /^Expired/.test(n) ? 'bad' : '' })));
+    list.hidden = !notes.length;
+  });
+}
+// Encode / Decode: re-run when the mode changes.
+encMode.addEventListener('change', () => document.getElementById('enc-in').dispatchEvent(new Event('input', { bubbles: true })));
 
 // Compare & merge, WinMerge style: both sides stay editable and copies rewrite them.
 // All user text goes through textContent so markup in it is never parsed.
@@ -223,7 +247,30 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     els[current].querySelector('button').focus({ preventScroll: !scroll });
   }
 
-  $('#compare-btn').addEventListener('click', () => compare());
+  // Compare as JSON: rewrite both sides to one canonical layout first, so key order and
+  // formatting don't show as differences. The originals go on the undo stack.
+  const jsonMode = $('#json-mode');
+  $('#compare-btn').addEventListener('click', () => {
+    if (jsonMode.checked) {
+      const out = {};
+      for (const [name, t] of [['Left', left], ['Right', right]]) {
+        try { out[name] = normalizeJson(t.value); }
+        catch {
+          const e = jsonStatus(t.value).error;
+          err.textContent = `${name} side is not valid JSON${e?.line ? ` (line ${e.line}, column ${e.col})` : ''}. Fix it or untick "Compare as JSON".`;
+          diff.replaceChildren(); identical.hidden = true; count.textContent = '';
+          return;
+        }
+      }
+      if (out.Left !== left.value || out.Right !== right.value) {
+        history.push({ left: left.value, right: right.value });
+        left.value = out.Left;
+        right.value = out.Right;
+        refreshButtons();
+      }
+    }
+    compare();
+  });
   prevBtn.addEventListener('click', () => go(current - 1));
   nextBtn.addEventListener('click', () => go(current + 1));
   undoBtn.addEventListener('click', () => {
@@ -426,6 +473,14 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
 }
 
 // One sample per editable panel for the empty state's "Try a sample".
+// Sample token: valid for an hour from page load; the signature is a placeholder.
+const b64url = s => base64Encode(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const nowSec = Math.floor(Date.now() / 1000);
+const SAMPLE_JWT = [
+  b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
+  b64url(JSON.stringify({ sub: '1234567890', name: 'Ann Nguyễn', role: 'admin', iat: nowSec - 300, exp: nowSec + 3600 })),
+  'SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
+].join('.');
 const PERSON = { name: 'Ann Nguyen', age: 31, active: true, email: 'ann@example.com', tags: ['dev', 'ops'], address: { city: 'Hanoi', geo: { lat: 21.03, lng: 105.85 } }, manager: null };
 const CONFIG_A = 'server:\n  host: example.com\n  port: 8080\n  timeout: 30\nlogging:\n  level: info\n  file: app.log\nfeatures:\n  - search\n  - export\n';
 const CONFIG_B = 'server:\n  host: example.com\n  port: 9090\n  timeout: 30\n  retries: 3\nlogging:\n  level: debug\n  file: app.log\nfeatures:\n  - search\n  - export\n  - share\n';
@@ -435,6 +490,8 @@ initPanels({
     't2j-in': JSON.stringify(JSON.stringify(PERSON)),
     'j2t-in': JSON.stringify(PERSON, null, 2),
     'min-in': JSON.stringify(PERSON, null, 2),
+    'jwt-in': SAMPLE_JWT,
+    'enc-in': 'Xin chào, thế giới! name=Ann Nguyen&tags=dev,ops',
     left: { left: CONFIG_A, right: CONFIG_B },
     right: { left: CONFIG_A, right: CONFIG_B },
   },

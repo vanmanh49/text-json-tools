@@ -91,6 +91,7 @@ const SEND_TO = [ // [label, tab, textarea id]
   ['JSON → Text', 'json-to-text', 'j2t-in'],
   ['Compare (left)', 'compare', 'left'],
   ['Compare (right)', 'compare', 'right'],
+  ['Encode / Decode', 'encode', 'enc-in'],
 ];
 
 // Turn engine wording into a short sentence; the line and column are shown separately.
@@ -116,6 +117,7 @@ export function initPanels({ samples = {} } = {}) {
     const label = tools.closest('.panel-head').firstElementChild.textContent;
     const isJson = tools.dataset.ext === 'json';
     const editable = t.tagName === 'TEXTAREA' && !t.readOnly;
+    const persist = editable && !t.hasAttribute('data-private'); // e.g. JWTs: never written to storage
     const name = `${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.${tools.dataset.ext}`; // e.g. one-line-json.json
 
     // Header buttons.
@@ -235,7 +237,7 @@ export function initPanels({ samples = {} } = {}) {
 
     // Remember editable text between visits (debounced; skipped for very large text).
     const save = () => {
-      if (!editable || savedValue === t.value) return;
+      if (!persist || savedValue === t.value) return;
       savedValue = t.value;
       saveNote = '';
       if (!remember) return;
@@ -252,7 +254,7 @@ export function initPanels({ samples = {} } = {}) {
       timer = setTimeout(() => { save(); update(); }, t.value.length > 200000 ? 300 : 60); // keep typing smooth in big documents
     });
 
-    if (editable && remember) {
+    if (persist && remember) {
       const saved = store.get('tjt:text:' + t.id);
       if (saved) { t.value = saved; t.dispatchEvent(new Event('input', { bubbles: true })); }
       savedValue = t.value;
@@ -265,7 +267,7 @@ export function initPanels({ samples = {} } = {}) {
   rememberBox.addEventListener('change', () => {
     remember = rememberBox.checked;
     store.set('tjt:settings', JSON.stringify({ remember }));
-    for (const t of document.querySelectorAll('textarea:not([readonly])')) {
+    for (const t of document.querySelectorAll('textarea:not([readonly]):not([data-private])')) {
       if (remember && t.value && t.value.length <= MAX_SAVE) store.set('tjt:text:' + t.id, t.value);
       else store.del('tjt:text:' + t.id);
     }

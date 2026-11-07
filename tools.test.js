@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode } from './tools.js';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -215,4 +215,59 @@ test('errorLocation reads V8 "Unexpected token" messages, which quote a snippet 
 test('jsonStatus gives a line for a trailing-comma error in Chrome/Node', () => {
   const st = jsonStatus('{\n  "a": 1,\n  "b": [1, 2,]\n}');
   assert.equal(st.error.line, 3);
+});
+
+test('normalizeJson makes key order and formatting irrelevant', () => {
+  const a = normalizeJson('{"b":1,"a":{"d":2,"c":3}}');
+  const b = normalizeJson('{\n "a": {"c":3,  "d":2},\n "b":1}');
+  assert.equal(a, b);
+  assert.equal(a, '{\n  "a": {\n    "c": 3,\n    "d": 2\n  },\n  "b": 1\n}');
+  assert.equal(normalizeJson('  '), '');
+  assert.throws(() => normalizeJson('{"a":'));
+});
+
+const b64url = s => Buffer.from(s).toString('base64url');
+const token = (h, p, sig = 'c2ln') => `${b64url(JSON.stringify(h))}.${b64url(JSON.stringify(p))}.${sig}`;
+test('decodeJwt decodes header and payload, including UTF-8 and a Bearer prefix', () => {
+  const t = token({ alg: 'HS256', typ: 'JWT' }, { sub: '42', name: 'Nguyễn Ann' });
+  assert.deepEqual(decodeJwt(t), { header: { alg: 'HS256', typ: 'JWT' }, payload: { sub: '42', name: 'Nguyễn Ann' }, signature: 'c2ln' });
+  assert.deepEqual(decodeJwt('Bearer ' + t + '\n').payload, { sub: '42', name: 'Nguyễn Ann' });
+});
+test('decodeJwt explains what is wrong with a bad token', () => {
+  assert.throws(() => decodeJwt('a.b.c.d.e'), /encrypted/);
+  assert.throws(() => decodeJwt('abc.def'), /three parts/);
+  assert.throws(() => decodeJwt('!!!.' + b64url('{}') + '.x'), /header/);
+  assert.throws(() => decodeJwt(b64url('{}') + '.' + b64url('not json') + '.x'), /payload/);
+  assert.equal(decodeJwt('   '), null);
+});
+test('jwtTimeNotes describes iat, nbf and exp relative to now', () => {
+  const now = Date.UTC(2026, 10, 7, 12, 0, 0) / 1000;
+  assert.deepEqual(jwtTimeNotes({ iat: now - 60, nbf: now + 3600, exp: now + 7200, name: 'x' }, now), [
+    'Issued 1 minute ago (2026-11-07 11:59:00 UTC)',
+    'Becomes valid in 1 hour (2026-11-07 13:00:00 UTC)',
+    'Expires in 2 hours (2026-11-07 14:00:00 UTC)',
+  ]);
+  assert.deepEqual(jwtTimeNotes({ exp: now - 3 * 86400 }, now), ['Expired 3 days ago (2026-11-04 12:00:00 UTC)']);
+  assert.deepEqual(jwtTimeNotes({ exp: 'soon' }, now), []);
+});
+
+test('base64 round-trips UTF-8 text and accepts URL-safe input without padding', () => {
+  assert.equal(base64Encode('hi'), 'aGk=');
+  const s = 'Xin chào, thế giới! 😀';
+  assert.equal(base64Decode(base64Encode(s)), s);
+  assert.equal(base64Decode('aGk'), 'hi');
+  assert.equal(base64Decode(Buffer.from('?>?').toString('base64url')), '?>?');
+  assert.equal(base64Decode(' aG\nk= '), 'hi');
+  assert.equal(base64Encode(''), '');
+});
+test('base64 handles large input and reports bad or binary data', () => {
+  const big = 'é'.repeat(600000);
+  assert.equal(base64Decode(base64Encode(big)), big);
+  assert.throws(() => base64Decode('not base64!'), /Base64/);
+  assert.throws(() => base64Decode('/w=='), /UTF-8/);
+});
+test('URL encode/decode', () => {
+  assert.equal(urlEncode('a b&c=đ'), 'a%20b%26c%3D%C4%91');
+  assert.equal(urlDecode('a+b%20c%C4%91'), 'a b cđ');
+  assert.throws(() => urlDecode('%E0%A4%A'), /URL/);
 });

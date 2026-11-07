@@ -39,7 +39,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 | `tools.test.js` | `node --test` suite for `tools.js` |
 | `package.json` | `"type": "module"`, devDependency `diff@9.0.0`, `"test": "node --test"` |
 
-The active tab comes from the URL hash: `#format`, `#text-to-json`, `#json-to-text`, `#minify`, `#compare`.
+The active tab comes from the URL hash: `#format`, `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#jwt`, `#encode`.
 An empty or unknown hash shows `#format`.
 
 ## Functions (`tools.js`)
@@ -92,6 +92,18 @@ Empty input to the three JSON tools returns `''` without an error.
 
 ## UI
 
+- **JWT Decode (`#jwt`):**
+  - `decodeJwt` turns the token into the header and payload, shown as pretty JSON. A `Bearer ` prefix and surrounding whitespace are accepted.
+  - The `iat`, `nbf` and `exp` claims are listed in plain English ("Expires in 2 hours (… UTC)"), and expired ones are shown in red.
+  - Encrypted tokens (JWE, with 5 parts) and malformed tokens get a clear error.
+  - The signature is never checked, and the page says so. The token textarea has `data-private`, so it is never written to browser storage.
+- **Encode / Decode (`#encode`):** a mode picker for Base64 encode, Base64 decode, URL encode and URL decode.
+  - Base64 handles UTF-8 and accepts the URL-safe alphabet without padding. Binary data gets a clear error instead of garbled text.
+  - URL decode treats `+` as a space.
+- **Compare as JSON:** a checkbox in the Compare toolbar.
+  - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.
+  - The originals go on the undo stack.
+  - An invalid side is named, with its line and column.
 - **Shell:**
   - A top bar holds the `{ }` brand, the tool tabs as a segmented control, a theme switch (System → Light → Dark, remembered) and a ⚙ menu.
   - The menu has "Remember my text in this browser" (on by default) and "Clear all panels", which needs a second click to confirm.

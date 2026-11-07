@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Text &amp; JSON Tools</title>
-  <meta name="description" content="Free in-browser tools: format JSON with colours and folding, unescape text to JSON, escape JSON to text, minify JSON, and compare and merge text. Nothing leaves your browser.">
+  <meta name="description" content="Free in-browser tools: format JSON with colours and folding, decode JWTs, Base64 and URL encode/decode, unescape text to JSON, escape JSON to text, minify JSON, and compare and merge text. Nothing leaves your browser.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233446C2'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='17' font-weight='700' text-anchor='middle' fill='white'%3E%7B%7D%3C/text%3E%3C/svg%3E">
   <link rel="preload" href="vendor/fonts/ibm-plex-sans-latin-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="vendor/fonts/ibm-plex-mono-latin-400.woff2" as="font" type="font/woff2" crossorigin>
@@ -28,6 +28,8 @@
       <a href="#text-to-json">Text → JSON</a>
       <a href="#json-to-text">JSON → Text</a>
       <a href="#minify">JSON Minify</a>
+      <a href="#jwt">JWT Decode</a>
+      <a href="#encode">Encode / Decode</a>
     </nav>
     <div class="top-actions">
       <button id="theme" class="icon-btn" type="button"></button>
@@ -116,6 +118,47 @@
       <p class="err" role="alert"></p>
     </section>
 
+    <section data-tab="jwt" hidden>
+      <p class="desc">Read a JSON Web Token's header and payload. Decoding happens in your browser and tokens are never saved. The signature is not checked, so don't trust the contents until your server has verified it.</p>
+      <div class="io">
+        <div class="panel">
+          <div class="panel-head"><label for="jwt-in">Token</label><div class="tools" data-for="jwt-in" data-ext="txt"></div></div>
+          <textarea id="jwt-in" class="in" spellcheck="false" data-private></textarea>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><label for="jwt-out">Header and payload</label><div class="tools" data-for="jwt-out" data-ext="json"></div></div>
+          <textarea id="jwt-out" class="out" readonly spellcheck="false"></textarea>
+        </div>
+      </div>
+      <ul id="jwt-times" class="jwt-times" aria-live="polite" hidden></ul>
+      <p class="err" role="alert"></p>
+    </section>
+
+    <section data-tab="encode" hidden>
+      <p class="desc">Encode or decode Base64 and URL text. Characters from any language are handled as UTF-8.</p>
+      <div class="toolbar">
+        <label class="inline">Mode
+          <select id="enc-mode">
+            <option value="base64-encode">Base64 encode</option>
+            <option value="base64-decode">Base64 decode</option>
+            <option value="url-encode">URL encode</option>
+            <option value="url-decode">URL decode</option>
+          </select>
+        </label>
+      </div>
+      <div class="io">
+        <div class="panel">
+          <div class="panel-head"><label for="enc-in">Input</label><div class="tools" data-for="enc-in" data-ext="txt"></div></div>
+          <textarea id="enc-in" class="in" spellcheck="false"></textarea>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><label for="enc-out">Output</label><div class="tools" data-for="enc-out" data-ext="txt"></div></div>
+          <textarea id="enc-out" class="out" readonly spellcheck="false"></textarea>
+        </div>
+      </div>
+      <p class="err" role="alert"></p>
+    </section>
+
     <section data-tab="compare" hidden>
       <p class="desc">Compare two texts side by side and copy changes line by line or block by block, like WinMerge.</p>
       <div class="inputs">
@@ -137,6 +180,7 @@
       <p class="err" role="alert"></p>
       <div class="toolbar">
         <button id="compare-btn" class="primary" type="button">Compare</button>
+        <label class="inline" title="Ignore key order and formatting: both sides are rewritten with keys A→Z before comparing (Undo restores them)"><input type="checkbox" id="json-mode"> Compare as JSON</label>
         <button id="prev-diff" type="button" title="Previous difference (Alt+↑)" disabled>‹ Prev<span class="wide"> diff</span></button>
         <button id="next-diff" type="button" title="Next difference (Alt+↓). Alt+→ / Alt+← copy it to the right / left" disabled>Next<span class="wide"> diff</span> ›</button>
         <span id="diff-count" class="muted" role="status"></span>

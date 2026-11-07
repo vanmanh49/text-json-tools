@@ -160,3 +160,74 @@ export function formatSize(bytes) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
+
+// Compare as JSON: one canonical layout (keys A→Z, 2-space indent) so only real data differences show.
+export function normalizeJson(s) {
+  return s.trim() ? linesText(jsonLines(JSON.parse(s), 2, true), 2) : '';
+}
+
+// UTF-8-safe Base64. Bytes go through String.fromCharCode in chunks (spreading a big array overflows the stack).
+export function base64Encode(s) {
+  const bytes = new TextEncoder().encode(s);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+// Accepts standard and URL-safe Base64, with or without padding and line breaks.
+export function base64Decode(s) {
+  let b = s.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+  if (!b) return '';
+  b += '='.repeat((4 - (b.length % 4)) % 4);
+  let bin;
+  try { bin = atob(b); } catch { throw new Error('This is not valid Base64.'); }
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
+  catch { throw new Error("The decoded data isn't UTF-8 text (it may be an image or other binary file)."); }
+}
+
+export const urlEncode = s => encodeURIComponent(s);
+// '+' means a space in query strings; a literal plus is always encoded as %2B, so this is safe.
+export function urlDecode(s) {
+  try { return decodeURIComponent(s.replace(/\+/g, ' ')); }
+  catch { throw new Error('This is not valid URL encoding (a % must be followed by two hex digits).'); }
+}
+
+// Decodes a JWT's header and payload in the browser. Does NOT verify the signature.
+export function decodeJwt(s) {
+  const t = s.trim().replace(/^Bearer\s+/i, '');
+  if (!t) return null;
+  const parts = t.split('.');
+  if (parts.length === 5) throw new Error("This is an encrypted token (JWE). It can't be read without the key.");
+  if (parts.length !== 3) throw new Error('A JWT has three parts separated by dots (header.payload.signature).');
+  const part = (text, name) => {
+    try { return JSON.parse(base64Decode(text)); }
+    catch { throw new Error(`The ${name} is not valid Base64URL-encoded JSON.`); }
+  };
+  return { header: part(parts[0], 'header'), payload: part(parts[1], 'payload'), signature: parts[2] };
+}
+
+const span = sec => {
+  const units = [['day', 86400], ['hour', 3600], ['minute', 60]];
+  for (const [name, size] of units) {
+    const n = Math.floor(sec / size);
+    if (n >= 1) return `${n} ${name}${n > 1 ? 's' : ''}`;
+  }
+  return 'less than a minute';
+};
+const utc = sec => new Date(sec * 1000).toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+
+// Human-readable notes for the standard time claims (seconds since 1970), in claim order iat, nbf, exp.
+export function jwtTimeNotes(payload, now = Date.now() / 1000) {
+  const notes = [];
+  const at = (claim, past, future) => {
+    const v = payload?.[claim];
+    if (typeof v !== 'number') return;
+    const d = v - now;
+    notes.push(`${d < 0 ? `${past} ${span(-d)} ago` : `${future} ${span(d)}`} (${utc(v)})`);
+  };
+  at('iat', 'Issued', 'Issued in');
+  at('nbf', 'Valid since', 'Becomes valid in');
+  at('exp', 'Expired', 'Expires in');
+  return notes;
+}
