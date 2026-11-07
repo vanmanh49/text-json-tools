@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A static, browser-only website with four tools: Text → JSON (unescape), JSON → Text (escape), JSON Simplify (minify), and Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right). No backend, no build step, no framework. The design spec and plan are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
+A static, browser-only website with five tools: JSON Format (Postman-style pretty view), Text → JSON (unescape), JSON → Text (escape), JSON Simplify (minify), and Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right). No backend, no build step, no framework. The design spec and plan are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
 
 ## Commands
 
@@ -19,7 +19,7 @@ There is no linter or bundler. To deploy, upload the folder as it is.
 
 ## Architecture
 
-- **`tools.js`** holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
+- **`tools.js`** holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `jsonLines`, `linesText`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
 - **`app.js`** only wires the DOM to those functions:
   - Tabs come from `location.hash`, and each section is a `<section data-tab="...">`.
   - The three JSON tools share one loop over a `{tab: fn}` map. Adding a JSON tool means two things:
@@ -53,6 +53,17 @@ There is no linter or bundler. To deploy, upload the folder as it is.
   - After a copy, `compare(index)` re-renders and moves focus back to the same difference.
 - `diffArrays` runs with `{ timeout: 1000 }`. When it gives up it returns `undefined`, and `diffBlocks` throws a "too different" error instead of freezing the tab.
 - The diff view renders user text only through `textContent`. Never use `innerHTML`, because the compared text can contain markup.
+
+## JSON Format view
+
+- `jsonLines` is the single source for both the coloured view and the copied text.
+  - `linesText(jsonLines(v, i), i) === JSON.stringify(v, null, i)` is tested.
+  - Change formatting in `jsonLines` only; never format the copy text separately.
+- The Pretty view is a `<div>`, not a textarea, so `app.js` stores its text on `view.value`. That is what the generic panel Copy/Download buttons read.
+- Panel tools add Paste and Clear only for `TEXTAREA`s that aren't readonly.
+- Folding works through nesting. `build()` nests each non-empty object/array as `.node > (.line, .kids, .line)` using `end`, and `.node.collapsed` hides `.kids` and the closing line through CSS. Line numbers are fixed per line, so they keep their values while folded.
+- Search wraps matches in `<mark>` inside token spans. Before a new search, `highlight()` rebuilds the view and carries over which nodes were folded.
+- Shared class names: `.ln` is used by both the Compare grid (`.diff .ln`) and the Pretty view (`.pretty .ln`). Scope any rule for one of them, or it breaks the other. An unscoped mobile `.ln { display: none }` once collapsed the Pretty view's columns.
 
 ## Known, accepted limits
 

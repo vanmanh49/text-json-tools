@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText } from './tools.js';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -116,4 +116,41 @@ test('very different large texts fail fast instead of freezing', () => {
   const t = Date.now();
   assert.throws(() => diffBlocks(rand(10000), rand(10000)), /too different/);
   assert.ok(Date.now() - t < 3000, `took ${Date.now() - t}ms`);
+});
+
+const indentStr = i => typeof i === 'number' ? ' '.repeat(i) : i;
+const samples = [
+  { a: 1, b: [1, 2, { c: null }], d: {}, e: [], f: 'x"y\n😀 Tiếng', g: true, h: -1.5e-7 },
+  [], {}, 1, 'str', null, false, [[[]]], { '': { k: [{}] } }, [1, [2, [3, { x: [] }]]],
+];
+for (const indent of [2, 4, '\t']) {
+  test(`jsonLines text equals JSON.stringify (indent ${JSON.stringify(indent)})`, () => {
+    for (const v of samples) assert.equal(linesText(jsonLines(v, indent), indent), JSON.stringify(v, null, indent));
+  });
+}
+test('jsonLines marks folds, counts and token classes', () => {
+  const lines = jsonLines({ a: [1, 'x'], b: {} }, 2);
+  assert.deepEqual(lines.map(l => [l.depth, l.end, l.count, l.kind]), [
+    [0, 6, 2, '{'], [1, 4, 2, '['], [2, undefined, undefined, undefined], [2, undefined, undefined, undefined],
+    [1, undefined, undefined, undefined], [1, undefined, undefined, undefined], [0, undefined, undefined, undefined],
+  ]);
+  assert.deepEqual(lines[1].parts, [['key', '"a"'], ['punc', ': '], ['punc', '[']]);
+  assert.deepEqual(lines[2].parts, [['num', '1'], ['punc', ',']]);
+  assert.deepEqual(lines[3].parts, [['str', '"x"']]);
+  assert.deepEqual(lines[5].parts, [['key', '"b"'], ['punc', ': '], ['punc', '{}']]);
+});
+test('every fold ends on its matching closing line', () => {
+  for (const v of samples) {
+    const lines = jsonLines(v, 2);
+    lines.forEach((l, i) => {
+      if (l.end == null) return;
+      assert.ok(l.end > i);
+      assert.equal(lines[l.end].depth, l.depth);
+      assert.equal(lines[l.end].parts[0][1], l.kind === '{' ? '}' : ']');
+    });
+  }
+});
+test('jsonLines can sort keys A→Z at every depth, including numeric-looking keys', () => {
+  const text = linesText(jsonLines({ b: 1, a: { d: 1, c: [{ z: 1, y: 2 }] }, 10: 0, 2: 0 }, 2, true), 2);
+  assert.equal(text.replace(/\s+/g, ''), '{"10":0,"2":0,"a":{"c":[{"y":2,"z":1}],"d":1},"b":1}');
 });

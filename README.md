@@ -1,15 +1,16 @@
 # Text & JSON Tools
 
-A static website with four text and JSON utilities. Everything runs in the browser and nothing is uploaded.
+A static website with five text and JSON utilities. Everything runs in the browser and nothing is uploaded.
 
 | Tool | What it does | Example |
 |------|--------------|---------|
+| **JSON Format** | A Postman-style pretty view with syntax colours, line numbers, ▾/▸ folding, indent of 2, 4 or Tab, sort keys A→Z, search, and Expand/Collapse all. | `{"a":[1,2]}` → coloured, foldable tree |
 | **Text → JSON** | Unescapes a JSON string literal into pretty JSON. It also accepts escaped JSON copied from a log without its outer quotes. | `"{\"name\":\"Ann\"}"` → `{ "name": "Ann" }` |
 | **JSON → Text** | Escapes JSON into a single string literal. | `{ "name": "Ann" }` → `"{\"name\":\"Ann\"}"` |
 | **JSON Simplify** | Minifies formatted JSON onto one line. | multi-line JSON → `{"a":[1,2]}` |
 | **Compare & Merge** | A WinMerge-style side-by-side diff. Copy one changed line (→ ←) or a whole block (Block ⇒ / ⇐ Block) to the other side. It also has Prev/Next diff and Undo. | |
 
-Each tool has its own link: `#text-to-json`, `#json-to-text`, `#minify`, `#compare`.
+Each tool has its own link: `#format` (the default), `#text-to-json`, `#json-to-text`, `#minify`, `#compare`.
 
 Every text panel has its own **Copy** and **Download** buttons. Editable panels also have **Paste** and **Clear**, and Cmd/Ctrl+Z undoes them. Compare also has **Swap**, which exchanges the left and right sides.
 

@@ -1,6 +1,6 @@
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText } from './tools.js';
 
-const TABS = ['text-to-json', 'json-to-text', 'minify', 'compare'];
+const TABS = ['format', 'text-to-json', 'json-to-text', 'minify', 'compare'];
 
 function showTab() {
   const tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : TABS[0];
@@ -66,13 +66,13 @@ function download(text, name) {
 for (const tools of document.querySelectorAll('.tools[data-for]')) {
   const t = document.getElementById(tools.dataset.for);
   const err = t.closest('section').querySelector('.err');
-  const label = tools.closest('.panel-head').querySelector('label').textContent;
+  const label = tools.closest('.panel-head').firstElementChild.textContent;
   const name = `${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.${tools.dataset.ext}`; // e.g. one-line-json.json
   tools.append(iconButton('copy', 'Copy', async e => {
     const b = e.currentTarget;
     try { await navigator.clipboard.writeText(t.value); flash(b, 'Copied'); } catch { flash(b, 'Copy failed'); }
   }));
-  if (!t.readOnly) {
+  if (t.tagName === 'TEXTAREA' && !t.readOnly) {
     tools.append(iconButton('paste', 'Paste', async () => {
       try { setText(t, await navigator.clipboard.readText()); }
       catch { err.textContent = 'The browser blocked clipboard access. Click the box and press Ctrl+V (⌘V on Mac).'; }
@@ -234,4 +234,148 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     [left.value, right.value] = [right.value, left.value];
     compare(Math.max(current, 0));
   }), { id: 'swap', title: 'Swap left and right' }));
+}
+
+// JSON Format: Postman-style pretty view with colours, line numbers, folding and search.
+// The view is a <div>, so its formatted text is kept on `view.value` for the panel Copy/Download buttons.
+{
+  const section = document.querySelector('section[data-tab="format"]');
+  const $ = sel => section.querySelector(sel);
+  const input = $('#fmt-in'), view = $('#fmt-out'), err = $('.err');
+  const indentSel = $('#fmt-indent'), sortBox = $('#fmt-sort'), search = $('#fmt-search'), countEl = $('#fmt-count');
+  let lines = [], marks = [], markAt = -1, timer;
+  view.value = '';
+
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+
+  function toggle(node, collapse = !node.classList.contains('collapsed')) {
+    node.classList.toggle('collapsed', collapse);
+    const b = node.firstElementChild.querySelector('.fold');
+    b.textContent = collapse ? '▸' : '▾';
+    b.setAttribute('aria-expanded', String(!collapse));
+  }
+
+  function code(row, parts) {
+    const c = el('span', 'code');
+    for (const [cls, text] of parts) c.append(el('span', cls, text));
+    row.append(c);
+    return c;
+  }
+
+  // shortcut: renders every line into the DOM; fine to tens of thousands of lines, virtualize if users paste far bigger payloads.
+  function build(collapsed = new Set()) {
+    const root = document.createDocumentFragment();
+    const stack = [];
+    let cur = root;
+    lines.forEach((l, i) => {
+      const row = el('div', 'line');
+      row.style.setProperty('--d', l.depth);
+      row.append(el('span', 'ln', i + 1));
+      if (stack.length && i === stack.at(-1).end) {
+        const s = stack.pop();
+        row.append(el('span', 'fold-pad'));
+        code(row, l.parts);
+        s.node.append(row);
+        cur = s.parent;
+        return;
+      }
+      if (l.end == null) {
+        row.append(el('span', 'fold-pad'));
+        code(row, l.parts);
+        cur.append(row);
+        return;
+      }
+      const node = el('div', 'node'), kids = el('div', 'kids');
+      node.dataset.i = i;
+      const fold = el('button', 'fold', '▾');
+      fold.type = 'button';
+      fold.setAttribute('aria-expanded', 'true');
+      fold.setAttribute('aria-label', `Fold line ${i + 1}`);
+      fold.addEventListener('click', () => toggle(node));
+      row.append(fold);
+      const noun = l.kind === '{' ? (l.count === 1 ? 'key' : 'keys') : (l.count === 1 ? 'item' : 'items');
+      const sum = el('span', 'summary');
+      sum.append(el('span', 'punc', '…' + lines[l.end].parts.map(p => p[1]).join('')), el('span', 'hint', ` ${l.count} ${noun}`));
+      code(row, l.parts).append(sum);
+      node.append(row, kids);
+      cur.append(node);
+      stack.push({ node, parent: cur, end: l.end });
+      cur = kids;
+      if (collapsed.has(i)) toggle(node, true);
+    });
+    view.replaceChildren(root);
+  }
+
+  function render() {
+    err.textContent = '';
+    const s = input.value.trim();
+    let v;
+    try {
+      if (!s) throw null;
+      v = JSON.parse(s);
+    } catch (e) {
+      lines = [];
+      view.value = '';
+      view.replaceChildren();
+      countEl.textContent = '';
+      if (e) err.textContent = e.message;
+      return;
+    }
+    const indent = indentSel.value === 'tab' ? '\t' : Number(indentSel.value);
+    lines = jsonLines(v, indent, sortBox.checked);
+    view.value = linesText(lines, indent);
+    view.style.setProperty('--indent', (indent === '\t' ? 4 : indent) + 'ch');
+    build();
+    highlight();
+  }
+
+  // Rebuilds (keeping folds), wraps matches in <mark>, and unfolds the nodes that contain them.
+  // shortcut: matches within one token only (a key, a value, punctuation), not across tokens.
+  function highlight() {
+    const q = search.value.trim().toLowerCase();
+    if (marks[0]?.isConnected) build(new Set([...view.querySelectorAll('.node.collapsed')].map(n => +n.dataset.i)));
+    marks = [];
+    markAt = -1;
+    if (!q || !lines.length) { countEl.textContent = ''; return; }
+    for (const span of view.querySelectorAll('.code > span:not(.summary)')) {
+      const text = span.textContent, lower = text.toLowerCase();
+      let at = lower.indexOf(q);
+      if (at < 0) continue;
+      span.textContent = '';
+      let pos = 0;
+      for (; at >= 0; at = lower.indexOf(q, pos)) {
+        span.append(text.slice(pos, at));
+        const m = el('mark', null, text.slice(at, at + q.length));
+        span.append(m);
+        marks.push(m);
+        pos = at + q.length;
+      }
+      span.append(text.slice(pos));
+      for (let k = span.closest('.kids'); k; k = k.parentElement.closest('.kids')) toggle(k.parentElement, false);
+    }
+    countEl.textContent = marks.length ? `${marks.length} match${marks.length > 1 ? 'es' : ''}` : 'No matches';
+  }
+
+  function nextMark(step) {
+    if (!marks.length) return;
+    marks[markAt]?.classList.remove('current');
+    markAt = (markAt + step + marks.length) % marks.length;
+    marks[markAt].classList.add('current');
+    marks[markAt].scrollIntoView({ block: 'center' });
+    countEl.textContent = `${markAt + 1} of ${marks.length}`;
+  }
+
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(render, 150); });
+  indentSel.addEventListener('change', render);
+  sortBox.addEventListener('change', render);
+  search.addEventListener('input', highlight);
+  search.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nextMark(e.shiftKey ? -1 : 1); } });
+  $('#fmt-expand').addEventListener('click', () => view.querySelectorAll('.node').forEach(n => toggle(n, false)));
+  // Keep the root open so the top-level keys stay visible, as Postman does.
+  $('#fmt-collapse').addEventListener('click', () => view.querySelectorAll('.node .node').forEach(n => toggle(n, true)));
 }

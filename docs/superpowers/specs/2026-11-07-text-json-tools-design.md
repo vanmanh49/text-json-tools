@@ -4,8 +4,9 @@ Date: 2026-11-07
 
 ## Goal
 
-A public, static website with four browser-only utilities:
+A public, static website with five browser-only utilities:
 
+0. **JSON Format**: a Postman-style pretty view with syntax colours, line numbers, folding, indent choice, key sorting and search.
 1. **Text → JSON** — unescape a JSON string literal into pretty JSON.
 2. **JSON → text** — escape JSON into a single string literal.
 3. **JSON simplify** — minify formatted JSON to one line.
@@ -38,8 +39,8 @@ No backend, accounts, history, share links, file upload, or analytics.
 | `tools.test.js` | `node --test` suite for `tools.js` |
 | `package.json` | `"type": "module"`, devDependency `diff@9.0.0`, `"test": "node --test"` |
 
-The active tab comes from the URL hash: `#text-to-json`, `#json-to-text`, `#minify`, `#compare`.
-An empty or unknown hash shows `#text-to-json`.
+The active tab comes from the URL hash: `#format`, `#text-to-json`, `#json-to-text`, `#minify`, `#compare`.
+An empty or unknown hash shows `#format`.
 
 ## Functions (`tools.js`)
 
@@ -70,11 +71,37 @@ the UI shows.
     there, it is replaced. If the target has a gap, the line is inserted. If the
     source has a gap, the target's line is deleted.
   - An out-of-range `block` changes nothing. The source side is never changed.
+- `jsonLines(value, indent = 2, sort = false)` → one entry per output line:
+  `{ depth, parts: [[cls, text], …] }`.
+  - `cls` is one of `key`, `str`, `num`, `bool`, `null` or `punc`.
+  - A line that opens a non-empty object or array also has `kind` (`'{'` or
+    `'['`), `count` (the number of children) and `end` (the index of its closing
+    line).
+  - Empty `{}` and `[]` stay on one line.
+  - With `sort`, object keys are ordered A→Z with `localeCompare` at every depth.
+    This includes numeric-looking keys, which a plain object would reorder.
+- `linesText(lines, indent)` joins the lines with the indent string (a number of
+  spaces, or `'\t'`). Unsorted, the result is byte-identical to
+  `JSON.stringify(value, null, indent)`.
 
 Empty input to the three JSON tools returns `''` without an error.
 
 ## UI
 
+- **JSON Format:** a toolbar with Indent (2 spaces, 4 spaces or Tab), "Sort keys
+  A→Z", Expand all, Collapse all, a search box and a match count. Below it, the
+  JSON input panel sits next to the Pretty panel.
+  - The Pretty view is a `<div>` that re-renders 150ms after typing stops. It
+    shows a line-number gutter, a ▾/▸ fold button on each non-empty
+    object/array, and coloured tokens.
+  - A folded node shows `{…} 3 keys` or `[…] 2 items`. Line numbers keep their
+    original values while folded.
+  - Collapse all keeps the root open.
+  - Search highlights matches inside single tokens and unfolds their ancestors.
+    Enter and Shift+Enter cycle through the matches.
+  - The Pretty panel's Copy and Download give `linesText` output, without line
+    numbers or fold markers.
+  - Invalid JSON clears the view and shows the parse error.
 - **Panels (every tool):** each textarea sits in a `.panel` with a header row:
   its label on the left and icon buttons on the right.
   - Every panel has **Copy** and **Download**. Download saves a `.json` file for
@@ -127,6 +154,10 @@ Empty input to the three JSON tools returns `''` without an error.
     addition and a pure deletion each give one change block.
   - `applyCopy`, one line at a time: replace, insert into a gap, and copying a
     gap deletes the line.
+  - `jsonLines`/`linesText`: equal to `JSON.stringify` for indent 2, 4 and tab
+    across nested, empty, unicode, escaped and scalar values. Every fold ends on
+    its matching bracket at the same depth. Token classes are right, and sorting
+    covers numeric-looking keys.
   - `applyCopy`, whole blocks: each direction, and an out-of-range block is a
     no-op.
   - Copying every block in one direction makes both sides identical, including

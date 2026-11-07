@@ -58,3 +58,40 @@ export function applyCopy(left, right, { block, row, dir }) {
   }).join('\n');
   return dir === 'right' ? { left, right: text } : { left: text, right };
 }
+
+// Postman-style pretty view model: one entry per output line, with coloured parts
+// ([class, text]) and, on lines that open a non-empty object/array, the index of
+// the closing line (`end`), the child `count` and the bracket `kind`.
+// Joined with linesText() it is byte-identical to JSON.stringify(value, null, indent).
+export function jsonLines(value, indent = 2, sort = false) {
+  const lines = [];
+  const walk = (v, depth, key, last) => {
+    const head = key === undefined ? [] : [['key', JSON.stringify(key)], ['punc', ': ']];
+    const comma = last ? [] : [['punc', ',']];
+    if (v !== null && typeof v === 'object') {
+      const isArr = Array.isArray(v);
+      // sorting entries here (not by rebuilding an object) keeps numeric-looking keys in A→Z order too
+      const keys = isArr ? null : Object.keys(v);
+      if (sort && keys) keys.sort((a, b) => a.localeCompare(b));
+      const n = isArr ? v.length : keys.length;
+      const [o, c] = isArr ? ['[', ']'] : ['{', '}'];
+      if (!n) { lines.push({ depth, parts: [...head, ['punc', o + c], ...comma] }); return; }
+      const open = { depth, parts: [...head, ['punc', o]], kind: o, count: n };
+      lines.push(open);
+      if (isArr) v.forEach((x, i) => walk(x, depth + 1, undefined, i === n - 1));
+      else keys.forEach((k, i) => walk(v[k], depth + 1, k, i === n - 1));
+      open.end = lines.length;
+      lines.push({ depth, parts: [['punc', c], ...comma] });
+      return;
+    }
+    const cls = typeof v === 'string' ? 'str' : typeof v === 'number' ? 'num' : typeof v === 'boolean' ? 'bool' : 'null';
+    lines.push({ depth, parts: [...head, [cls, JSON.stringify(v)], ...comma] });
+  };
+  walk(value, 0, undefined, true);
+  return lines;
+}
+
+export function linesText(lines, indent = 2) {
+  const ind = typeof indent === 'number' ? ' '.repeat(indent) : indent;
+  return lines.map(l => ind.repeat(l.depth) + l.parts.map(p => p[1]).join('')).join('\n');
+}

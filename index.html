@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Text &amp; JSON Tools</title>
-  <meta name="description" content="Free in-browser tools: unescape text to JSON, escape JSON to text, minify JSON, and compare and merge text. Nothing leaves your browser.">
+  <meta name="description" content="Free in-browser tools: format JSON with colours and folding, unescape text to JSON, escape JSON to text, minify JSON, and compare and merge text. Nothing leaves your browser.">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
   <script type="importmap">{"imports":{"diff":"./vendor/diff-9.0.0.js"}}</script>
@@ -15,6 +15,7 @@
     <h1>Text &amp; JSON Tools</h1>
     <p class="tagline">Runs entirely in your browser. Nothing is uploaded.</p>
     <nav>
+      <a href="#format">JSON Format</a>
       <a href="#text-to-json">Text → JSON</a>
       <a href="#json-to-text">JSON → Text</a>
       <a href="#minify">JSON Simplify</a>
@@ -23,6 +24,31 @@
   </header>
 
   <main>
+    <section data-tab="format" hidden>
+      <p class="desc">Pretty-print JSON with colours, line numbers and folding, like Postman.</p>
+      <div class="toolbar">
+        <label class="inline">Indent
+          <select id="fmt-indent"><option value="2">2 spaces</option><option value="4">4 spaces</option><option value="tab">Tab</option></select>
+        </label>
+        <label class="inline"><input type="checkbox" id="fmt-sort"> Sort keys A→Z</label>
+        <button id="fmt-expand" type="button">Expand all</button>
+        <button id="fmt-collapse" type="button">Collapse all</button>
+        <input id="fmt-search" type="search" placeholder="Search…" aria-label="Search in formatted JSON (Enter for next match)">
+        <span id="fmt-count" class="muted" role="status"></span>
+      </div>
+      <div class="io">
+        <div class="panel">
+          <div class="panel-head"><label for="fmt-in">JSON</label><div class="tools" data-for="fmt-in" data-ext="json"></div></div>
+          <textarea id="fmt-in" spellcheck="false" placeholder='{"name":"Ann","tags":["a","b"],"address":{"city":"Hanoi"}}'></textarea>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span id="fmt-out-label">Pretty</span><div class="tools" data-for="fmt-out" data-ext="json"></div></div>
+          <div id="fmt-out" class="pretty" role="region" aria-labelledby="fmt-out-label" tabindex="0"></div>
+        </div>
+      </div>
+      <p class="err" role="alert"></p>
+    </section>
+
     <section data-tab="text-to-json" hidden>
       <p class="desc">Unescape a JSON string literal into pretty JSON.</p>
       <div class="io">
