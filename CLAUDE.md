@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A static, browser-only website with five tools: JSON Format (Postman-style pretty view), Text → JSON (unescape), JSON → Text (escape), JSON Simplify (minify), and Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right). No backend, no build step, no framework. The design spec and plan are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
+A static, browser-only website with five tools: JSON Format (Postman-style pretty view), Text → JSON (unescape), JSON → Text (escape), JSON Minify, and Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right). No backend, no build step, no framework. The design spec and plan are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
 
 ## Commands
 

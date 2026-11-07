@@ -9,7 +9,7 @@ A public, static website with five browser-only utilities:
 0. **JSON Format**: a Postman-style pretty view with syntax colours, line numbers, folding, indent choice, key sorting and search.
 1. **Text → JSON** — unescape a JSON string literal into pretty JSON.
 2. **JSON → text** — escape JSON into a single string literal.
-3. **JSON simplify** — minify formatted JSON to one line.
+3. **JSON Minify**: minify formatted JSON to one line.
 4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
