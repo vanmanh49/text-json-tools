@@ -53,7 +53,18 @@
       <button class="copy" type="button">Copy</button>
     </section>
 
-    <section data-tab="compare" hidden></section>
+    <section data-tab="compare" hidden>
+      <p class="desc">Line diff two texts, pick left or right per change, copy the merged result.</p>
+      <div class="io">
+        <label for="left">Left<textarea id="left" spellcheck="false"></textarea></label>
+        <label for="right">Right<textarea id="right" spellcheck="false"></textarea></label>
+      </div>
+      <p class="err" role="alert"></p>
+      <button id="compare-btn" class="primary" type="button">Compare</button>
+      <div id="diff" aria-live="polite"></div>
+      <label for="merged">Merged result<textarea id="merged" readonly spellcheck="false"></textarea></label>
+      <button class="copy" type="button">Copy</button>
+    </section>
   </main>
 </body>
 </html>

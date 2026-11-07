@@ -68,3 +68,22 @@ button {
   border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text);
 }
 button.primary, button.copy { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+
+/* Compare & merge */
+#compare-btn { margin-bottom: 16px; }
+#diff { display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
+#diff pre {
+  margin: 0; padding: 4px 8px; white-space: pre-wrap; overflow-wrap: anywhere;
+  font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  border-radius: 4px;
+}
+#diff .same { color: var(--same); }
+#diff .del { background: var(--del); }
+#diff .add { background: var(--add); }
+.change { border: 1px solid var(--border); border-radius: 6px; padding: 6px; background: var(--panel); }
+.sides { display: grid; gap: 4px; grid-template-columns: 1fr; }
+@media (min-width: 800px) { .sides { grid-template-columns: 1fr 1fr; } }
+.picks { display: flex; gap: 8px; margin-top: 6px; }
+.picks button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.nodiff { color: var(--muted); margin: 0; }
+#merged { min-height: 200px; }

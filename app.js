@@ -1,4 +1,4 @@
-import { textToJson, jsonToText, minify } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, merge } from './tools.js';
 
 const TABS = ['text-to-json', 'json-to-text', 'minify', 'compare'];
 
@@ -41,4 +41,78 @@ for (const [tab, fn] of Object.entries(JSON_TOOLS)) {
     }
   });
   section.querySelector('.copy').addEventListener('click', e => copy(output.value, e.currentTarget));
+}
+
+// Compare & merge. All user text goes through textContent so markup in it is never parsed.
+{
+  const section = document.querySelector('section[data-tab="compare"]');
+  const left = section.querySelector('#left');
+  const right = section.querySelector('#right');
+  const diff = section.querySelector('#diff');
+  const merged = section.querySelector('#merged');
+  const err = section.querySelector('.err');
+  let blocks = [];
+  let choices = [];
+
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+
+  function render() {
+    diff.replaceChildren();
+    let i = 0;
+    for (const b of blocks) {
+      if (b.type === 'same') { diff.append(el('pre', 'same', b.lines.join('\n'))); continue; }
+      const idx = i++;
+      const pick = choices[idx] ?? 'right';
+      const row = el('div', 'change');
+      const sides = el('div', 'sides');
+      const show = lines => !lines.length ? '(nothing)' : lines.join('\n') || '(empty line)';
+      sides.append(el('pre', 'del', show(b.left)), el('pre', 'add', show(b.right)));
+      const btns = el('div', 'picks');
+      for (const side of ['left', 'right']) {
+        const btn = el('button', null, side === 'left' ? 'Use left' : 'Use right');
+        btn.type = 'button';
+        btn.setAttribute('aria-pressed', String(pick === side));
+        btn.addEventListener('click', () => { // update in place so keyboard focus stays on the button
+          choices[idx] = side;
+          for (const x of btns.children) x.setAttribute('aria-pressed', String(x === btn));
+          merged.value = merge(blocks, choices);
+        });
+        btns.append(btn);
+      }
+      row.append(sides, btns);
+      diff.append(row);
+    }
+    merged.value = merge(blocks, choices);
+  }
+
+  section.querySelector('#compare-btn').addEventListener('click', () => {
+    try {
+      blocks = diffBlocks(left.value, right.value);
+      choices = [];
+      err.textContent = '';
+      if (!blocks.some(b => b.type === 'change')) {
+        diff.replaceChildren(el('p', 'nodiff', 'No differences'));
+        merged.value = left.value;
+        return;
+      }
+      render();
+    } catch (e) {
+      diff.replaceChildren();
+      merged.value = '';
+      err.textContent = e.message;
+    }
+  });
+
+  for (const t of [left, right]) t.addEventListener('input', () => {
+    blocks = []; choices = [];
+    diff.replaceChildren();
+    merged.value = '';
+  });
+
+  section.querySelector('.copy').addEventListener('click', e => copy(merged.value, e.currentTarget));
 }

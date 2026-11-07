@@ -55,14 +55,16 @@ the UI shows.
 - `jsonToText(s)` → `JSON.stringify(JSON.stringify(JSON.parse(s)))`.
   Example: `{ "name": "Ann" }` → `"{\"name\":\"Ann\"}"`.
 - `minify(s)` → `JSON.stringify(JSON.parse(s))`.
-- `diffBlocks(left, right)` → an array of blocks from jsdiff `diffLines`:
-  - `{ type: 'same', text }` for unchanged runs.
-  - `{ type: 'change', left, right }` for a removed run, an added run, or a removed
-    run followed by an added run, which together form one block. A side with no
-    lines is `''`.
-- `merge(blocks, choices)` → a string. `choices[i]` is `'left'` or `'right'` for
-  change block `i` in index order. It defaults to `'right'`. Same blocks are
-  copied as they are.
+- `diffBlocks(left, right)` → an array of blocks from jsdiff `diffArrays`, run
+  over `left.split('\n')` and `right.split('\n')`. Splitting into lines keeps a
+  missing final newline or CRLF from changing the merge.
+  - `{ type: 'same', lines: string[] }` for unchanged runs.
+  - `{ type: 'change', left: string[], right: string[] }` for a removed run, an
+    added run, or a removed run followed by an added run, which together form
+    one block. A side with no lines is `[]`.
+- `merge(blocks, choices)` → the chosen lines joined with `'\n'`. `choices[i]` is
+  `'left'` or `'right'` for change block `i` in index order. It defaults to
+  `'right'`. Same blocks are copied as they are.
 
 Empty input to the three JSON tools returns `''` without an error.
 

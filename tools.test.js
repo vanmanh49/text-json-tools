@@ -37,26 +37,33 @@ test('minify throws on invalid input', () => {
   assert.throws(() => minify('{"a":'));
 });
 
+const changes = blocks => blocks.filter(b => b.type === 'change').length;
+
 test('identical texts give only same blocks', () => {
-  assert.deepEqual(diffBlocks('a\nb\n', 'a\nb\n'), [{ type: 'same', text: 'a\nb\n' }]);
+  assert.deepEqual(diffBlocks('a\nb\n', 'a\nb\n'), [{ type: 'same', lines: ['a', 'b', ''] }]);
 });
 test('replacement is one change block', () => {
-  assert.deepEqual(diffBlocks('a\nb\nc\n', 'a\nB\nc\n'), [
-    { type: 'same', text: 'a\n' },
-    { type: 'change', left: 'b\n', right: 'B\n' },
-    { type: 'same', text: 'c\n' },
+  assert.deepEqual(diffBlocks('a\nb\nc', 'a\nB\nc'), [
+    { type: 'same', lines: ['a'] },
+    { type: 'change', left: ['b'], right: ['B'] },
+    { type: 'same', lines: ['c'] },
   ]);
 });
 test('pure addition and pure deletion', () => {
-  assert.deepEqual(diffBlocks('a\n', 'a\nd\n'), [{ type: 'same', text: 'a\n' }, { type: 'change', left: '', right: 'd\n' }]);
-  assert.deepEqual(diffBlocks('a\nd\n', 'a\n'), [{ type: 'same', text: 'a\n' }, { type: 'change', left: 'd\n', right: '' }]);
+  assert.deepEqual(diffBlocks('a', 'a\nd'), [{ type: 'same', lines: ['a'] }, { type: 'change', left: [], right: ['d'] }]);
+  assert.deepEqual(diffBlocks('a\nd', 'a'), [{ type: 'same', lines: ['a'] }, { type: 'change', left: ['d'], right: [] }]);
+});
+test('missing final newline does not swallow the last shared line', () => {
+  // regression: raw diffLines treated 'c' and 'c\n' as different lines
+  const blocks = diffBlocks('a\nb\nc', 'a\nB\nc\nd');
+  assert.equal(changes(blocks), 2);
+  assert.equal(merge(blocks, ['left']), 'a\nb\nc\nd');
 });
 test('merge defaults to right, all-left gives left', () => {
   const L = 'a\nb\nc\n', R = 'a\nB\nc\nd\n';
   const blocks = diffBlocks(L, R);
-  const n = blocks.filter(b => b.type === 'change').length;
   assert.equal(merge(blocks, []), R);
-  assert.equal(merge(blocks, Array(n).fill('left')), L);
+  assert.equal(merge(blocks, Array(changes(blocks)).fill('left')), L);
 });
 test('merge picks per block', () => {
   const blocks = diffBlocks('a\nb\nc\nx\n', 'a\nB\nc\ny\n');
@@ -65,12 +72,18 @@ test('merge picks per block', () => {
 test('trailing newline mismatch round-trips exactly', () => {
   const L = 'a\nb', R = 'a\nb\n';
   const blocks = diffBlocks(L, R);
-  const n = blocks.filter(b => b.type === 'change').length;
-  assert.equal(merge(blocks, Array(n).fill('left')), L);
+  assert.equal(merge(blocks, Array(changes(blocks)).fill('left')), L);
   assert.equal(merge(blocks, []), R);
 });
 test('one side empty', () => {
-  const blocks = diffBlocks('', 'x\ny\n');
-  assert.deepEqual(blocks, [{ type: 'change', left: '', right: 'x\ny\n' }]);
+  const blocks = diffBlocks('', 'x\ny');
+  assert.deepEqual(blocks, [{ type: 'change', left: [''], right: ['x', 'y'] }]);
   assert.equal(merge(blocks, ['left']), '');
+  assert.equal(merge(blocks, []), 'x\ny');
+});
+test('CRLF text merges back unchanged', () => {
+  const L = 'a\r\nb\r\n', R = 'a\r\nB\r\n';
+  const blocks = diffBlocks(L, R);
+  assert.equal(merge(blocks, ['left']), L);
+  assert.equal(merge(blocks, []), R);
 });
