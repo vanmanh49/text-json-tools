@@ -13,9 +13,11 @@ function showTab() {
     if (a.hash === '#' + tab) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   }
+  // Start in the tool's first input (Compare: Left) unless focus is already in the tool.
+  const section = document.querySelector(`section[data-tab="${tab}"]`);
+  if (!section.contains(document.activeElement)) section.querySelector('textarea:not([readonly])')?.focus({ preventScroll: true });
 }
 addEventListener('hashchange', showTab);
-showTab();
 
 // Floating "back to top" button for long pages (all tools).
 const toTop = document.getElementById('to-top');
@@ -107,7 +109,6 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
       left.value = r.left;
       right.value = r.right;
       compare(opts.block);
-      refreshButtons();
     } catch (e) {
       err.textContent = e.message;
     }
@@ -234,6 +235,7 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
       count.textContent = '';
       err.textContent = e.message;
     }
+    refreshButtons(); // the text may have changed without an input event, and the search re-runs on the new diff
   }
 
   function go(i, scroll = true) {
@@ -266,7 +268,6 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
         history.push({ left: left.value, right: right.value });
         left.value = out.Left;
         right.value = out.Right;
-        refreshButtons();
       }
     }
     compare();
@@ -279,7 +280,6 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
     left.value = s.left;
     right.value = s.right;
     compare(Math.max(current, 0));
-    refreshButtons();
   });
   // Typing invalidates the diff; the textarea's own undo covers typed edits, so drop copy history.
   for (const t of [left, right]) t.addEventListener('input', () => {
@@ -312,7 +312,6 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
     history.push({ left: left.value, right: right.value });
     [left.value, right.value] = [right.value, left.value];
     compare(Math.max(current, 0));
-    refreshButtons();
   }), { id: 'swap', title: 'Swap left and right' });
   swap.replaceWith(swapBtn);
   const compareBtn = $('#compare-btn');
@@ -496,3 +495,4 @@ initPanels({
     right: { left: CONFIG_A, right: CONFIG_B },
   },
 });
+showTab(); // after initPanels: it moves each textarea into an .editor, which would drop the focus

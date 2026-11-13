@@ -231,3 +231,15 @@ export function jwtTimeNotes(payload, now = Date.now() / 1000) {
   at('exp', 'Expired', 'Expires in');
   return notes;
 }
+
+// [start, end] of each case-insensitive match of `q` in `text`, at most `limit`. `q` is plain text, not a pattern.
+export function findAll(text, q, limit = Infinity) {
+  const out = [];
+  if (!q) return out;
+  // A regex keeps offsets in the original string; lowercasing first can change its length (e.g. 'İ').
+  for (const m of text.matchAll(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'))) {
+    if (out.length >= limit) break;
+    out.push([m.index, m.index + m[0].length]);
+  }
+  return out;
+}
