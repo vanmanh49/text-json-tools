@@ -199,6 +199,28 @@ Empty input to the three JSON tools returns `''` without an error.
       Alt+← copy the current difference to the right or left, and Ctrl/⌘+Z
       undoes the last copy. These are ignored while focus is in a textarea,
       input or select.
+- **Search (every tool):** JSON Format keeps its Pretty-view search. Every other
+  tool gets a search box (added by `panels.js`) in its toolbar, or in a new
+  toolbar row above the panels.
+  - It finds plain text, ignoring case (`findAll`), in every visible panel and,
+    on Compare, in the diff rows. It shows "N matches", then "3 of N" while
+    Enter / Shift+Enter move through them. It stops counting at 2,000 ("2000+").
+  - Matches are painted with the CSS Custom Highlight API. A textarea doesn't
+    show a selection while the search box has focus, so a transparent copy of
+    its text (`.hl`) sits behind it and takes the paint. Going to a match in a
+    collapsed unchanged run expands that run.
+  - The matches refresh when the text changes, on resize, and when the tab is
+    shown.
+- **Focus and shortcuts (every tool):**
+  - Opening a tool puts the cursor in its first editable panel (Compare: Left),
+    unless focus is already inside that tool.
+  - Ctrl/⌘+F focuses the tool's search box. If that box is disabled, the
+    browser's own find opens instead.
+  - Ctrl/⌘+V while focus is outside any text box pastes into the tool's
+    input. On Compare it goes to the first empty side, otherwise to Left.
+  - Ctrl/⌘+Z only undoes the box that has focus. The browser keeps one undo
+    history for the page, so without this, undoing in the search box went on
+    to undo the panels' last edits and emptied them.
 - A floating "↑ Top" button appears once the page is scrolled more than 400px
   (all tools). The JSON Format toolbar is sticky too.
 - Controls are native buttons and labelled textareas, so they work with the

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll } from './tools.js';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -270,4 +270,13 @@ test('URL encode/decode', () => {
   assert.equal(urlEncode('a b&c=đ'), 'a%20b%26c%3D%C4%91');
   assert.equal(urlDecode('a+b%20c%C4%91'), 'a b cđ');
   assert.throws(() => urlDecode('%E0%A4%A'), /URL/);
+});
+
+test('findAll: case-insensitive plain-text matches with offsets into the original text', () => {
+  assert.deepEqual(findAll('Ann ann ANN', 'ann'), [[0, 3], [4, 7], [8, 11]]);
+  assert.deepEqual(findAll('a.b axb (a.b)', 'a.b'), [[0, 3], [9, 12]]); // '.' is literal
+  assert.deepEqual(findAll('İx ix', 'ix'), [[3, 5]]);
+  assert.deepEqual(findAll('aaaa', 'aa'), [[0, 2], [2, 4]]);
+  assert.deepEqual(findAll('aaaa', 'a', 2), [[0, 1], [1, 2]]);
+  assert.deepEqual(findAll('abc', ''), []);
 });

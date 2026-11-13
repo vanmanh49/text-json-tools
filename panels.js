@@ -1,6 +1,6 @@
 // Panel chrome shared by every tool: the buttons in each panel header, the status bar, the empty
 // state, file drop, "Send to", remembered text and the theme switch. Tool logic lives in app.js.
-import { jsonStatus, formatSize } from './tools.js';
+import { jsonStatus, formatSize, findAll } from './tools.js';
 
 // Static icon markup (never user text), stroke icons in the Lucide style.
 const ICONS = {
@@ -309,5 +309,112 @@ export function initPanels({ samples = {} } = {}) {
     showTheme(theme);
   });
 
+  for (const section of document.querySelectorAll('section[data-tab]')) if (!section.querySelector('input[type="search"]')) initSearch(section);
+
+  // Ctrl/⌘+F goes to the open tool's search box; the browser's own find is used when it is disabled.
+  document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f') return;
+    const box = document.querySelector('section:not([hidden]) input[type="search"]');
+    if (!box || box.disabled) return;
+    e.preventDefault();
+    box.focus();
+    box.select();
+  });
+  // The browser keeps one undo history for the whole page, so Ctrl/⌘+Z in the search box would go on to
+  // undo a panel's edits (wiping a paste) once its own typing is undone. Undo only the focused box.
+  document.addEventListener('beforeinput', e => {
+    if (e.inputType.startsWith('history') && e.target !== document.activeElement) e.preventDefault();
+  });
+  // Ctrl/⌘+V outside a text box pastes into the open tool's input (Compare: the first empty side).
+  // shortcut: Safari may not fire 'paste' when nothing editable is focused; the inputs get focus on tab open anyway.
+  document.addEventListener('paste', e => {
+    if (e.target.closest?.('textarea, input, select, [contenteditable]')) return;
+    const text = e.clipboardData?.getData('text/plain');
+    const inputs = [...document.querySelectorAll('section:not([hidden]) textarea:not([readonly])')];
+    const t = inputs.find(i => !i.value) ?? inputs[0];
+    if (!text || !t) return;
+    e.preventDefault();
+    setText(t, text);
+  });
+
   refreshButtons();
+}
+
+// Search box for a tool: finds text in its visible panels and, on Compare, in the diff.
+// Matches are painted with the CSS Custom Highlight API. A textarea hides its selection while the
+// search box has focus, so each one gets a transparent copy of its text (.hl) laid behind it to paint on.
+const MAX_HITS = 2000; // more makes typing in the box sluggish on big documents
+const canPaint = typeof Highlight === 'function' && !!globalThis.CSS?.highlights;
+function initSearch(section) {
+  let bar = section.querySelector('.toolbar');
+  if (!bar) section.querySelector('.io').before(bar = el('div', 'toolbar'));
+  const box = Object.assign(el('input'), { type: 'search', placeholder: 'Search…' });
+  box.setAttribute('aria-label', 'Search in this tool (Enter for next match, Shift+Enter for previous)');
+  const count = el('span', 'muted');
+  count.setAttribute('role', 'status');
+  bar.append(box, count);
+  let hits = [], at = -1, timer;
+
+  const paint = () => {
+    if (!canPaint) return;
+    CSS.highlights.set('find', new Highlight(...hits));
+    CSS.highlights.set('find-current', new Highlight(...(hits[at] ? [hits[at]] : [])));
+  };
+  const collect = (node, q) => {
+    if (!node) return;
+    for (const [a, b] of findAll(node.data, q, MAX_HITS - hits.length)) {
+      const r = new Range();
+      r.setStart(node, a);
+      r.setEnd(node, b);
+      hits.push(r);
+    }
+  };
+  function run() {
+    const q = box.value;
+    hits = [];
+    at = -1;
+    for (const t of section.querySelectorAll('textarea')) {
+      const ed = t.parentElement, on = !!q && t.checkVisibility();
+      let hl = ed.querySelector('.hl');
+      ed.classList.toggle('searching', on);
+      if (!on) { hl?.replaceChildren(); continue; }
+      if (!hl) {
+        t.before(hl = el('div', 'hl'));
+        t.addEventListener('scroll', () => { hl.scrollTop = t.scrollTop; });
+      }
+      hl.replaceChildren(t.value, el('br')); // the <br> keeps a trailing newline's empty line, as the textarea shows it
+      Object.assign(hl.style, { width: t.clientWidth + 'px', height: t.clientHeight + 'px' }); // without the scrollbar
+      hl.scrollTop = t.scrollTop;
+      collect(hl.firstChild, q);
+    }
+    if (q) for (const s of section.querySelectorAll('.diff .txt')) collect(s.firstChild, q);
+    paint();
+    count.textContent = !q ? '' : !hits.length ? 'No matches'
+      : `${hits.length >= MAX_HITS ? MAX_HITS + '+' : hits.length} match${hits.length > 1 ? 'es' : ''}`;
+  }
+  function go(step) {
+    if (!hits.length) return;
+    at = (at + step + hits.length) % hits.length;
+    const r = hits[at], host = r.startContainer.parentElement, hl = host.closest('.hl');
+    if (hl) {
+      const t = hl.nextElementSibling;
+      t.scrollTop += r.getBoundingClientRect().top - t.getBoundingClientRect().top - t.clientHeight / 3;
+      t.scrollIntoView({ block: 'nearest' });
+    } else {
+      const hidden = host.closest('.hidden-lines');
+      if (hidden?.hidden) hidden.previousElementSibling.click(); // its "⋯ N unchanged lines" button
+      host.scrollIntoView({ block: 'center' });
+    }
+    paint();
+    count.textContent = `${at + 1} of ${hits.length >= MAX_HITS ? MAX_HITS + '+' : hits.length}`;
+  }
+
+  box.addEventListener('input', run);
+  box.addEventListener('focus', run); // the panels may have changed while the box was elsewhere
+  box.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(e.shiftKey ? -1 : 1); } });
+  // Text, tab or size changes move the matches.
+  const later = () => { if (box.value && !section.hidden) { clearTimeout(timer); timer = setTimeout(run, 150); } };
+  onRefresh(later);
+  addEventListener('resize', later);
+  addEventListener('hashchange', () => { if (!section.hidden) run(); });
 }
