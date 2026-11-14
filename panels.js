@@ -366,6 +366,11 @@ export function initPanels({ samples = {} } = {}) {
 // Matches are painted with the CSS Custom Highlight API. A textarea hides its selection while the
 // search box has focus, so each one gets a transparent copy of its text (.hl) laid behind it to paint on.
 const MAX_HITS = 2000; // more makes typing in the box sluggish on big documents
+const SEARCH_OPTIONS = [ // [findAll option, button text, label]
+  ['matchCase', 'Aa', 'Match case'],
+  ['wholeWord', 'ab', 'Match whole word'],
+  ['regex', '.*', 'Use regular expression'],
+];
 const canPaint = typeof Highlight === 'function' && !!globalThis.CSS?.highlights;
 function initSearch(section) {
   let bar = section.querySelector('.toolbar');
@@ -374,7 +379,22 @@ function initSearch(section) {
   box.setAttribute('aria-label', 'Search in this tool (Enter for next match, Shift+Enter for previous)');
   const count = el('span', 'muted');
   count.setAttribute('role', 'status');
-  bar.append(box, count);
+  // Toggles, as in VS Code: they apply to this tool's search only and are not remembered.
+  const opts = {};
+  const toggles = SEARCH_OPTIONS.map(([key, text, label]) => {
+    const b = el('button', 'opt', text);
+    b.type = 'button';
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => {
+      opts[key] = !opts[key];
+      b.setAttribute('aria-pressed', String(opts[key]));
+      run();
+    });
+    return b;
+  });
+  bar.append(box, ...toggles, count);
   let hits = [], at = -1, timer;
 
   const paint = () => {
@@ -384,7 +404,7 @@ function initSearch(section) {
   };
   const collect = (node, q) => {
     if (!node) return;
-    for (const [a, b] of findAll(node.data, q, MAX_HITS - hits.length)) {
+    for (const [a, b] of findAll(node.data, q, MAX_HITS - hits.length, opts)) {
       const r = new Range();
       r.setStart(node, a);
       r.setEnd(node, b);
@@ -392,7 +412,9 @@ function initSearch(section) {
     }
   };
   function run() {
-    const q = box.value;
+    let q = box.value, bad = false;
+    try { findAll('', q, 1, opts); } catch { bad = true; q = ''; } // a regex that doesn't compile finds nothing
+    box.toggleAttribute('aria-invalid', bad);
     hits = [];
     at = -1;
     for (const t of section.querySelectorAll('textarea')) {
@@ -412,7 +434,7 @@ function initSearch(section) {
     // shortcut: a Pretty-view match must sit inside one token (key, value, punctuation), not span tokens.
     if (q) for (const s of section.querySelectorAll('.diff .txt, .pretty .code > span:not(.summary)')) collect(s.firstChild, q);
     paint();
-    count.textContent = !q ? '' : !hits.length ? 'No matches'
+    count.textContent = bad ? 'Invalid regex' : !q ? '' : !hits.length ? 'No matches'
       : `${hits.length >= MAX_HITS ? MAX_HITS + '+' : hits.length} match${hits.length > 1 ? 'es' : ''}`;
   }
   function go(step) {

@@ -280,6 +280,17 @@ test('findAll: case-insensitive plain-text matches with offsets into the origina
   assert.deepEqual(findAll('aaaa', 'a', 2), [[0, 1], [1, 2]]);
   assert.deepEqual(findAll('abc', ''), []);
 });
+test('findAll options: match case, whole word, regex', () => {
+  assert.deepEqual(findAll('Ann ann', 'ann', Infinity, { matchCase: true }), [[4, 7]]);
+  // whole word: letters, digits and _ from any language count as word characters
+  assert.deepEqual(findAll('id userId id_x (id) chàoid', 'id', Infinity, { wholeWord: true }), [[0, 2], [16, 18]]);
+  assert.deepEqual(findAll('a-1 b-22 c-333', String.raw`\w-\d{2,}`, Infinity, { regex: true }), [[4, 8], [9, 14]]);
+  assert.deepEqual(findAll('cat category cats', 'cat|cats', Infinity, { regex: true, wholeWord: true }), [[0, 3], [13, 17]]);
+  assert.deepEqual(findAll('a\nb\nab', '^b', Infinity, { regex: true }), [[2, 3]]); // ^ and $ work per line
+  assert.deepEqual(findAll('abc', 'x*', Infinity, { regex: true }), []); // empty matches are skipped
+  assert.deepEqual(findAll('a.b axb', 'a.b', Infinity, { wholeWord: true }), [[0, 3]]); // still literal without regex
+  assert.throws(() => findAll('abc', '(', Infinity, { regex: true }), SyntaxError);
+});
 
 test('repairJson fixes comments, trailing commas, quotes, bare keys and Python literals', () => {
   const broken = `{
