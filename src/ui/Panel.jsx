@@ -25,7 +25,7 @@ function download(text, name) {
 }
 
 // Editable: text lives in the store (`id`). Read-only or with `children` (Pretty view): `value` is the text.
-export default function Panel({ id, label, labelId, ext, tab, readOnly, value, onErr, children }) {
+export default function Panel({ id, label, labelId, ext, tab, readOnly, value, className, onErr, children }) {
   const stored = useText(id);
   const ta = useRef(null);
   const editable = !readOnly && !children;
@@ -52,8 +52,10 @@ export default function Panel({ id, label, labelId, ext, tab, readOnly, value, o
     e.target.selectedIndex = 0;
     if (!targetId) return;
     textStore.set(targetId, text);
+    const focus = () => requestAnimationFrame(() => document.getElementById(targetId)?.focus());
+    if (location.hash === '#' + target) return focus(); // no hashchange will fire
+    addEventListener('hashchange', focus, { once: true }); // focus after the tab is shown, not before
     location.hash = '#' + target;
-    requestAnimationFrame(() => document.getElementById(targetId)?.focus());
   };
 
   const drop = {
@@ -95,7 +97,7 @@ export default function Panel({ id, label, labelId, ext, tab, readOnly, value, o
       <div className="editor" {...(editable ? drop : {})}>
         <div className="hl" />
         {children ?? (
-          <textarea id={id} ref={ta} spellCheck={false} readOnly={readOnly} value={text} data-private={PRIVATE_IDS.has(id) || undefined}
+          <textarea id={id} className={className} ref={ta} spellCheck={false} readOnly={readOnly} value={text} data-private={PRIVATE_IDS.has(id) || undefined}
             onChange={editable ? e => textStore.set(id, e.target.value) : undefined} />
         )}
         <div className="empty" hidden={!empty}>

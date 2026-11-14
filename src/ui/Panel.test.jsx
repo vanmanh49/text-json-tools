@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import Panel from './Panel.jsx';
@@ -44,10 +45,19 @@ test('broken but fixable JSON offers Fix JSON, and clicking it repairs', () => {
 });
 
 test("status is not recomputed for another panel's edit", () => {
-  render(<><Panel id="fmt-in" label="JSON" ext="json" tab="format" /><Panel id="min-in" label="JSON" ext="json" tab="minify" /></>);
+  let bump;
+  function Both() {
+    const [, setN] = useState(0);
+    bump = () => setN(n => n + 1);
+    return <><Panel id="fmt-in" label="JSON" ext="json" tab="format" /><Panel id="min-in" label="JSON" ext="json" tab="minify" /></>;
+  }
+  render(<Both />);
   act(() => textStore.set('fmt-in', '{"a":1}'));
   settle();
   jsonStatus.mockClear();
+  act(() => bump()); // parent re-renders both panels with unchanged text
+  settle();
+  expect(jsonStatus).not.toHaveBeenCalled();
   act(() => textStore.set('min-in', '[1]'));
   settle();
   expect(jsonStatus.mock.calls.length).toBeGreaterThan(0);

@@ -46,3 +46,9 @@ test('clear all needs two clicks', () => {
   expect(textStore.get('left')).toBe('');
   expect(btn.textContent).toBe('Clear all panels');
 });
+
+test('opening a tool focuses its input', () => {
+  location.hash = '#minify';
+  render(<App />);
+  expect(document.activeElement.id).toBe('min-in');
+});
