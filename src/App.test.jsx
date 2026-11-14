@@ -1,10 +1,14 @@
-import { afterEach, beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import App from './App.jsx';
 import { textStore } from './textStore.js';
 
-beforeEach(() => { localStorage.clear(); location.hash = ''; });
-afterEach(cleanup);
+beforeEach(() => {
+  localStorage.clear();
+  location.hash = '';
+  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} }); // jsdom has none; Compare observes #diff
+});
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 const hiddenTabs = c => [...c.querySelectorAll('section[data-tab]')].filter(s => s.hidden).map(s => s.dataset.tab);
 
