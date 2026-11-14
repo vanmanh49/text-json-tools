@@ -20,7 +20,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 
 ## Constraints
 
-- Static files only, deployable to GitHub Pages / Netlify as-is. No build step.
+- Static files only. Built with Vite (`npm run build`). GitHub Actions deploys `dist/` to GitHub Pages on every push to `main`; `dist/` also works on any static host.
 - Plain HTML + CSS + JS (ES modules).
 - One runtime dependency: `jsdiff` (`diff@9.0.0`), loaded in the browser from
   `vendor/diff-9.0.0.js` (the jsDelivr `+esm` bundle, kept in the repo so a blocked CDN cannot blank the page) through an import map
