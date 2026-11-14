@@ -27,36 +27,44 @@ Every text panel has its own **Copy** and **Download** buttons. Editable panels 
 
 ## Run locally
 
-ES modules need a web server, so opening `index.html` as a file won't work.
-
 ```bash
-python3 -m http.server 8000
-# open http://localhost:8000
+npm install
+npm run dev    # open the URL it prints
 ```
 
 ## Test
 
 ```bash
-npm install   # dev dependency only: jsdiff, so the tests use the same library as the page
-npm test      # node --test
+npm test       # Vitest with jsdom
 ```
 
 ## Deploy
 
-Upload the folder as it is to any static host, such as GitHub Pages, Netlify or Vercel. There is no build step. The page needs only `index.html`, `style.css`, `app.js`, `panels.js`, `tools.js` and `vendor/`.
+Push to `main`; `.github/workflows/deploy.yml` runs the tests, builds and publishes to Pages. Failing tests block the deploy.
+
+To host it elsewhere, run `npm run build` and upload `dist/` to any static host, such as Netlify or Vercel. Paths are relative, so it also works from a sub-path.
 
 ## Project layout
 
 ```
-index.html            page, tabs, import map ("diff" → vendor/diff-9.0.0.js)
-style.css             layout, light/dark theme, mobile
-app.js                DOM wiring only
-tools.js              pure logic: textToJson, jsonToText, minify, diffBlocks, applyCopy
-tools.test.js         unit tests
-panels.js             panel chrome: header buttons, status bar, empty state, file drop, Send to, remembered text, theme
-vendor/diff-9.0.0.js  jsdiff 9.0.0 (BSD-3-Clause), stored in the repo so a blocked CDN can't break the page
-vendor/fonts/         IBM Plex Sans/Mono woff2 subsets (SIL OFL 1.1, see OFL.txt)
-docs/superpowers/     design spec and implementation plan
+index.html                 page shell; applies the saved theme before first paint
+vite.config.js             Vite + React, base './', Vitest with jsdom
+public/fonts/              IBM Plex Sans/Mono woff2 subsets (SIL OFL 1.1, see OFL.txt)
+src/
+  main.jsx                 entry: page-wide listeners, renders App
+  App.jsx                  top bar, tabs, theme, settings menu
+  style.css                layout, light/dark theme, mobile
+  tools.js                 pure logic: textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, …
+  tools.test.js            unit tests for tools.js
+  store.js                 safe localStorage access, settings
+  textStore.js             panel text, remembered in this browser
+  setText.js               undo-friendly text replace for Paste, Clear, samples and drops
+  globals.js               page-wide drop guard and shortcuts
+  samples.js               "Try a sample" text
+  useHashTab.js            current tab from the URL hash
+  ui/                      IconButton, Panel, StatusBar, SearchBox
+  tools/                   TransformTool (five tools), FormatTool, CompareTool
+docs/superpowers/          design spec and implementation plans
 ```
 
 ## Known limits

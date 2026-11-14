@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson } from './tools.js';
 
@@ -102,15 +102,6 @@ test('copy is a no-op on an out-of-range block', () => {
   assert.deepEqual(applyCopy('a\nb', 'a\nB', { block: 5, dir: 'right' }), { left: 'a\nb', right: 'a\nB' });
 });
 
-test('page loads jsdiff from a local file, not a CDN', async () => {
-  const { readFile } = await import('node:fs/promises');
-  const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
-  const map = JSON.parse(html.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1]);
-  const src = map.imports.diff;
-  assert.match(src, /^\.\//, 'import map must point at a local path so a blocked CDN cannot blank the page');
-  const mod = await import(new URL(src, import.meta.url));
-  assert.equal(typeof mod.diffArrays, 'function');
-});
 test('very different large texts fail fast instead of freezing', () => {
   const rand = n => Array.from({ length: n }, () => Math.random().toString(36).slice(2)).join('\n');
   const t = Date.now();
