@@ -17,7 +17,7 @@ const shown = n => (n >= MAX_HITS ? MAX_HITS + '+' : n);
 const isBad = (q, opts) => { try { findAll('', q, 1, opts); return false; } catch { return true; } };
 
 // The .hl divs are rendered empty by Panel, so filling them through the DOM never fights React.
-export default function SearchBox({ sectionRef, version }) {
+export default function SearchBox({ sectionRef, version, hidden }) {
   const [q, setQ] = useState('');
   // Toggles, as in VS Code: they apply to this tool's search only and are not remembered.
   const [opts, setOpts] = useState({});
@@ -44,6 +44,7 @@ export default function SearchBox({ sectionRef, version }) {
     };
     for (const t of sectionRef.current.querySelectorAll('textarea')) {
       const hl = t.parentElement.querySelector('.hl');
+      if (!hl) continue;
       if (!query || !(t.checkVisibility?.() ?? !t.closest('[hidden]'))) { hl.replaceChildren(); continue; }
       if (!mirrored.has(t)) { mirrored.add(t); t.addEventListener('scroll', () => { hl.scrollTop = t.scrollTop; }); }
       hl.replaceChildren(t.value, document.createElement('br')); // the <br> keeps a trailing newline's empty line, as the textarea shows it
@@ -86,9 +87,9 @@ export default function SearchBox({ sectionRef, version }) {
     if (box.current.value && !sectionRef.current.hidden) { clearTimeout(timer.current); timer.current = setTimeout(() => runRef.current(), 150); }
   };
   useEffect(later, [version]);
+  // Showing the tab makes its panels visible, so the matches can be found and painted now.
+  useEffect(() => { if (!hidden && box.current.value) run(); }, [hidden]);
   useEffect(() => {
-    // The tab is shown by the render that follows hashchange, so look once that render is done.
-    const onHash = () => setTimeout(() => { const s = sectionRef.current; if (s && !s.hidden) runRef.current(); });
     // The store also notifies when it saves, which is no reason to search again.
     let texts = EDITABLE_IDS.map(textStore.get);
     const unsubscribe = textStore.subscribe(() => {
@@ -96,8 +97,7 @@ export default function SearchBox({ sectionRef, version }) {
       if (now.some((t, i) => t !== texts[i])) { texts = now; later(); }
     });
     addEventListener('resize', later);
-    addEventListener('hashchange', onHash);
-    return () => { unsubscribe(); clearTimeout(timer.current); removeEventListener('resize', later); removeEventListener('hashchange', onHash); };
+    return () => { unsubscribe(); clearTimeout(timer.current); removeEventListener('resize', later); };
   }, []);
 
   return (

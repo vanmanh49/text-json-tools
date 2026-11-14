@@ -189,6 +189,7 @@ export default function CompareTool({ hidden }) {
   };
 
   // Typing, Send to, Paste or a sample makes the diff stale. The textarea's own undo covers typed edits, so drop copy history.
+  // `result` is left out of the deps on purpose: this must run only when the texts change, not after each compare.
   useEffect(() => {
     if (result && result.left === left && result.right === right) return;
     history.current.length = 0;
@@ -203,14 +204,16 @@ export default function CompareTool({ hidden }) {
   // height, plus a box showing which part of the diff is on screen. Click a tick to jump there.
   const updateLocbar = useCallback(() => {
     const H = diff.current.offsetHeight;
-    if (!H) { setTicks([]); return; }
+    if (!H) { setTicks(old => (old.length ? [] : old)); return; }
     const top = toolbar.current.offsetHeight;
     locbar.current.style.top = top + 'px';
     locbar.current.style.height = Math.min(innerHeight - top - 16, H) + 'px'; // never taller than the diff itself
-    setTicks([...diff.current.querySelectorAll('.change')].map(c => ({
+    const next = [...diff.current.querySelectorAll('.change')].map(c => ({
       top: (c.offsetTop / H) * 100,
       height: Math.max((c.offsetHeight / H) * 100, 0.8),
-    })));
+    }));
+    // Resize callbacks fire often; an unchanged layout must not re-render the whole tool.
+    setTicks(old => (old.length === next.length && old.every((t, i) => t.top === next[i].top && t.height === next[i].height) ? old : next));
   }, []);
   const updateView = useCallback(() => {
     const v = view.current;
@@ -289,7 +292,7 @@ export default function CompareTool({ hidden }) {
         <span id="diff-count" className="muted" role="status">{countText}</span>
         <button id="undo" type="button" title="Undo last copy (Ctrl/⌘+Z)" disabled={!undoLen} onClick={undo}>Undo</button>
         <IconButton icon="swap" label="Swap" id="swap" title="Swap left and right" disabled={empty} onClick={swap} />
-        <SearchBox sectionRef={section} version={result} />
+        <SearchBox sectionRef={section} version={result} hidden={hidden} />
       </div>
       {/* Identical sides: an inline notice instead of a grid with nothing to merge. */}
       <p id="identical" className="notice" role="status" hidden={!blocks || total > 0}>

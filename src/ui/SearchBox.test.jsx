@@ -23,7 +23,7 @@ afterEach(() => {
   location.hash = '';
 });
 
-// The hash change queues a hashchange event, which re-runs the search: let it fire before the test starts.
+// The hash change queues a hashchange event: let it fire before the test starts.
 const open = tab => { location.hash = '#' + tab; const c = render(<App />).container; act(() => vi.runAllTimers()); return c; };
 // Two acts: the Format debounce timer is set by an effect, which runs when the first act ends.
 const settle = () => act(() => vi.advanceTimersByTime(150));
@@ -45,6 +45,17 @@ test('counts matches in the visible panels', () => {
   search(c, 'format', '');
   expect(count(c, 'format')).toBe('');
   expect(c.querySelector('section[data-tab="format"] .hl').childNodes).toHaveLength(0);
+});
+
+test('showing the tab again re-runs its search', () => {
+  const c = open('minify');
+  search(c, 'minify', 'x');
+  expect(count(c, 'minify')).toBe('No matches');
+  act(() => { location.hash = '#format'; vi.runAllTimers(); });
+  act(() => { textStore.set('min-in', '"x"'); vi.runAllTimers(); }); // hidden: the search waits
+  expect(count(c, 'minify')).toBe('No matches');
+  act(() => { location.hash = '#minify'; vi.runAllTimers(); });
+  expect(count(c, 'minify')).toBe('2 matches');
 });
 
 test('invalid regex says so', () => {

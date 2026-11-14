@@ -18,7 +18,7 @@ export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt,
   return (
     <section data-tab={tab} hidden={hidden} ref={section}>
       <p className="desc">{desc}</p>
-      <div className="toolbar">{toolbar}<SearchBox sectionRef={section} version={result.out} /></div>
+      <div className="toolbar">{toolbar}<SearchBox sectionRef={section} version={result.out} hidden={hidden} /></div>
       <div className="io">
         <Panel id={inId} label={inLabel} ext={inExt} tab={tab} className="in" onErr={setPanelErr} />
         <Panel id={outId} label={outLabel} ext={outExt} tab={tab} className="out" readOnly value={result.out} />

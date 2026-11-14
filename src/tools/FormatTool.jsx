@@ -100,7 +100,7 @@ export default function FormatTool({ hidden }) {
         <label className="inline"><input type="checkbox" id="fmt-sort" checked={sort} onChange={e => setSort(e.target.checked)} /> Sort keys A→Z</label>
         <button id="fmt-expand" type="button" disabled={!lines.length} onClick={() => setCollapsed(NONE)}>Expand all</button>
         <button id="fmt-collapse" type="button" disabled={!nested.length} onClick={() => setCollapsed(new Set(nested))}>Collapse all</button>
-        <SearchBox sectionRef={section} version={lines} />
+        <SearchBox sectionRef={section} version={lines} hidden={hidden} />
       </div>
       <div className="io">
         <Panel id="fmt-in" label="JSON" ext="json" tab="format" className="in" onErr={setPanelErr} />
