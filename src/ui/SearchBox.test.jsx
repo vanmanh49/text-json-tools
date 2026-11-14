@@ -114,6 +114,22 @@ test('paste outside a field goes to the first empty input', () => {
   expect(textStore.get('left')).toBe('x');
 });
 
+test('paste outside a field leaves a folded Compare alone', () => {
+  // jsdom has no layout: report what the .folded CSS hides as not visible.
+  HTMLElement.prototype.checkVisibility = function () { return !this.closest('.inputs.folded'); };
+  try {
+    const c = open('compare');
+    act(() => { textStore.set('left', 'a'); textStore.set('right', 'b'); });
+    fireEvent.click(c.querySelector('#compare-btn'));
+    expect(c.querySelector('.inputs.folded')).not.toBeNull();
+    const e = new Event('paste', { bubbles: true, cancelable: true });
+    e.clipboardData = { getData: () => 'x' };
+    act(() => { document.body.dispatchEvent(e); });
+    expect(e.defaultPrevented).toBe(false);
+    expect(textStore.get('left')).toBe('a');
+  } finally { delete HTMLElement.prototype.checkVisibility; }
+});
+
 test('beforeinput history in an unfocused element is cancelled', () => {
   const c = open('minify');
   const t = c.querySelector('#j2t-in');

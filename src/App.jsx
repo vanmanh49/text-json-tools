@@ -1,19 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { store, settings } from './store.js';
 import { textStore } from './textStore.js';
-import { useHashTab } from './useHashTab.js';
+import { NAV, useHashTab } from './useHashTab.js';
 import { IconButton } from './ui/IconButton.jsx';
 import { TextToJson, JsonToText, Minify, Jwt, Encode } from './tools/TransformTool.jsx';
 import FormatTool from './tools/FormatTool.jsx';
 import CompareTool from './tools/CompareTool.jsx';
 
-const NAV = [
-  ['format', 'JSON Format'], ['compare', 'Compare & Merge'], ['text-to-json', 'Text → JSON'],
-  ['json-to-text', 'JSON → Text'], ['minify', 'JSON Minify'], ['jwt', 'JWT Decode'], ['encode', 'Encode / Decode'],
-];
-// Same order as main's index.html.
 const TOOLS = { format: FormatTool, compare: CompareTool, 'text-to-json': TextToJson, 'json-to-text': JsonToText, minify: Minify, jwt: Jwt, encode: Encode };
-const SECTIONS = ['format', 'text-to-json', 'json-to-text', 'minify', 'jwt', 'encode', 'compare'];
 
 // Theme: System → Light → Dark. The initial value is applied by an inline script in <head>.
 const THEMES = ['system', 'light', 'dark'];
@@ -96,9 +90,9 @@ export default function App() {
         </header>
 
       <main>
-        {SECTIONS.map(t => {
+        {NAV.map(([t]) => {
           const Tool = TOOLS[t];
-          return Tool ? <Tool key={t} hidden={tab !== t} /> : <section key={t} data-tab={t} hidden={tab !== t} />;
+          return <Tool key={t} hidden={tab !== t} />;
         })}
       </main>
       <button id="to-top" className="to-top" type="button" aria-label="Back to top" hidden={!showTop} onClick={() => scrollTo({ top: 0, behavior: 'smooth' })}>↑ Top</button>

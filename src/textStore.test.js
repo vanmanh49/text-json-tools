@@ -50,6 +50,19 @@ describe('textStore', () => {
     expect(JSON.parse(localStorage.getItem('tjt:settings')).remember).toBe(false);
   });
 
+  it('remember back on re-saves text and notes what it could not save', async () => {
+    const { textStore } = await load();
+    textStore.setRemember(false);
+    textStore.set('left', 'a');
+    textStore.set('right', 'b'.repeat(2 * 1024 * 1024 + 1));
+    vi.advanceTimersByTime(400);
+    expect(textStore.saveNote('right')).toBe('');
+    textStore.setRemember(true);
+    expect(localStorage.getItem('tjt:text:left')).toBe('a');
+    expect(localStorage.getItem('tjt:text:right')).toBeNull();
+    expect(textStore.saveNote('right')).toBe(' · too large to remember');
+  });
+
   it('clearAll empties every editable panel', async () => {
     const { textStore, EDITABLE_IDS } = await load();
     for (const id of EDITABLE_IDS) textStore.set(id, 'v');

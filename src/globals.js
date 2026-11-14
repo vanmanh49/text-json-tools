@@ -27,7 +27,8 @@ export function installGlobalListeners() {
   document.addEventListener('paste', e => {
     if (e.target.closest?.('textarea, input, select, [contenteditable]')) return;
     const text = e.clipboardData?.getData('text/plain');
-    const inputs = [...document.querySelectorAll('section:not([hidden]) textarea:not([readonly])')];
+    // Visible boxes only: a folded Compare hides its inputs, and pasting there would replace Left unseen and un-undoably.
+    const inputs = [...document.querySelectorAll('section:not([hidden]) textarea:not([readonly])')].filter(i => i.checkVisibility?.() ?? true);
     const t = inputs.find(i => !i.value) ?? inputs[0];
     if (!text || !t) return;
     e.preventDefault();

@@ -24,7 +24,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
 - **File map** (all under `src/`):
   - `main.jsx` calls `installGlobalListeners()` and renders `App`.
   - `App.jsx`: top bar, tabs, theme, settings menu (remember text, Clear all). Toggles `body.app` for every tool except Compare. That class makes the section fill the screen so its panels scroll inside; Compare scrolls the page because of its sticky toolbar and location bar. Focuses the first editable textarea of the tab when it opens.
-  - `useHashTab.js`: the current tab, from `location.hash` (`TABS`; unknown or empty → `format`).
+  - `useHashTab.js`: `NAV`, the one list of tabs and menu labels, and the current tab from `location.hash` (unknown or empty → `format`).
   - `store.js`: the try/catch `store` helper around `localStorage`, `settings()`, `MAX_SAVE`.
   - `textStore.js`: the text of every editable panel, by textarea id (`EDITABLE_IDS`), with `useText(id)`, debounced saving and the "too large / not saved" notes.
   - `setText.js`: replaces a textarea's text so Cmd/Ctrl+Z can undo it.
@@ -43,7 +43,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - Paste, Clear, samples, drop and Fix JSON call `setText(id, text)`. It uses `execCommand` so the browser's undo still works, then makes sure the store has the text. It uses `execCommand` only when the textarea really has focus; otherwise the command would edit whichever box is focused. It also skips `insertText` for text with more than 200 newlines, because its cost grows roughly quadratically with line count (minutes for 20,000 lines). `delete` and undo stay linear.
   - Send to writes the target id with `textStore.set` and switches the hash.
 - **Tools render their own `<section data-tab="...">` and toolbar.** `App.jsx` passes `hidden`. `SearchBox` goes at the end of the toolbar and gets `sectionRef`, `hidden` and a `version` that changes when the tool's output changes.
-  - Adding a one-in, one-out tool: a `TransformTool` wrapper with its ids and function, an entry in `NAV`, `TOOLS` and `SECTIONS` in `App.jsx`, the input id in `EDITABLE_IDS`, a sample, and the tab in `TABS` in `src/useHashTab.js` (or its hash falls back to `format`).
+  - Adding a one-in, one-out tool: a `TransformTool` wrapper with its ids and function, an entry in `NAV` (`src/useHashTab.js`) and in `TOOLS` (`App.jsx`), the input id in `EDITABLE_IDS`, and a sample.
   - Panels whose input is JSON show parse errors in the status bar, so the tool's `.err` line stays empty for them.
   - Every tool call is wrapped in try/catch, and the message goes to the `.err` line.
   - Disabled states are computed in render from the text; nothing has to refresh them.

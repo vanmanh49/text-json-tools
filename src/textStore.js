@@ -48,10 +48,11 @@ export const textStore = {
     remember = on;
     store.set('tjt:settings', JSON.stringify({ remember }));
     for (const id of PERSISTED) {
-      const text = values[id] ?? '';
-      if (remember && text && text.length <= MAX_SAVE) store.set(key(id), text);
-      else store.del(key(id));
+      delete saved[id]; // so save() writes again and sets the "too large" / "not saved" note
+      if (remember) save(id);
+      else { store.del(key(id)); notes[id] = ''; }
     }
+    notify();
   },
   clearAll() {
     for (const id of EDITABLE_IDS) { store.del(key(id)); notes[id] = ''; textStore.set(id, ''); }
