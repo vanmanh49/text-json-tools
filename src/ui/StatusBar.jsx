@@ -8,7 +8,7 @@ const MAX_TRY_FIX = 1024 * 1024; // above this a trial repair stalls typing (~0.
 // Turn engine wording into a short sentence; the line and column are shown separately.
 export const tidy = msg => msg
   .replace(/^JSON\.parse: /, '')
-  .replace(/, (\.\.\.)?"[\s\S]*" is not valid JSON$/, '') // V8 quotes a snippet; the line/column replace it
+  .replace(/, (\.\.\.)?"[\s\S]*"(\.\.\.)? is not valid JSON$/, '') // V8 quotes a snippet (cut with "..." on long text); the line/column replace it
   .replace(/\s*(in JSON )?at (position|line) [\s\S]*$/, '')
   .replace(/^./, c => c.toUpperCase());
 

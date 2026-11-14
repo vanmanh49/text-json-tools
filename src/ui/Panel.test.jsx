@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import Panel from './Panel.jsx';
+import { tidy } from './StatusBar.jsx';
 import { textStore } from '../textStore.js';
 import { jsonStatus } from '../tools.js';
 
@@ -76,4 +77,9 @@ test('drop over MAX_DROP shows the size message', () => {
   const { container } = render(<Panel id="fmt-in" label="JSON" ext="json" tab="format" onErr={onErr} />);
   fireEvent.drop(container.querySelector('.editor'), { dataTransfer: { types: ['Files'], files: [{ size: 26 * 1024 * 1024, name: 'big.json' }] } });
   expect(onErr).toHaveBeenCalledWith('big.json is 26.0 MB. Files up to 25.0 MB can be opened here.');
+});
+
+test('status message drops the V8 snippet, also when it is cut at both ends', () => {
+  expect(tidy(`Unexpected token ',', ..."b": [1, 2,]" is not valid JSON`)).toBe("Unexpected token ','");
+  expect(tidy(`Unexpected token ',', ..."  "name": ,,BROKEN"i"... is not valid JSON`)).toBe("Unexpected token ','");
 });
