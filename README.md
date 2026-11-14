@@ -1,6 +1,6 @@
 # Text & JSON Tools
 
-A static website with five text and JSON utilities. Everything runs in the browser and nothing is uploaded.
+A static website with seven text and JSON utilities. Everything runs in the browser and nothing is uploaded.
 
 | Tool | What it does | Example |
 |------|--------------|---------|
@@ -18,7 +18,7 @@ Each tool has its own link: `#format` (the default), `#compare`, `#text-to-json`
 
 The app works like a small editor:
 - The panels fill the screen.
-- Each panel's status bar shows lines, size and whether the JSON is valid. **Go to error** jumps to the problem.
+- Each panel's status bar shows lines, size and whether the JSON is valid. **Go to error** jumps to the problem, and **Fix JSON** repairs almost-JSON: comments, trailing commas, single quotes, unquoted keys and Python's `True`/`False`/`None`.
 - Empty panels offer **Paste**, **Try a sample** and drag-and-drop of a file. Files are read in the browser and never uploaded.
 - Results can be sent to another tool with **Send to…**.
 - Your text is remembered in this browser (you can turn this off with ⚙). The theme can be System, Light or Dark.

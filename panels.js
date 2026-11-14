@@ -75,7 +75,7 @@ const store = {
   del(k) { try { localStorage.removeItem(k); } catch { /* nothing to remove */ } },
 };
 
-const el = (tag, cls, text) => {
+export const el = (tag, cls, text) => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
   if (text != null) e.textContent = text;
@@ -84,6 +84,7 @@ const el = (tag, cls, text) => {
 
 const MAX_DROP = 25 * 1024 * 1024; // larger files make the tools and the page sluggish
 const MAX_SAVE = 2 * 1024 * 1024; // localStorage is ~5 MB per site in most browsers
+const MAX_TRY_FIX = 1024 * 1024; // above this a trial repair stalls typing (~0.7s per 10 MB), so it runs on click only
 const SEND_TO = [ // [label, tab, textarea id]
   ['Format', 'format', 'fmt-in'],
   ['Minify', 'minify', 'min-in'],
@@ -203,7 +204,7 @@ export function initPanels({ samples = {} } = {}) {
     const status = el('div', 'status');
     status.setAttribute('aria-live', 'polite');
     panel.append(status);
-    let saveNote = '', timer, savedValue = remember ? null : undefined;
+    let saveNote = '', timer, shown, savedValue = remember ? null : undefined;
     const update = () => {
       const text = t.value;
       const st = isJson ? jsonStatus(text) : { empty: !text, lines: text ? text.split('\n').length : 0, bytes: new TextEncoder().encode(text).length };
@@ -218,13 +219,18 @@ export function initPanels({ samples = {} } = {}) {
         else {
           const at = st.error.line ? `Line ${st.error.line}, column ${st.error.col}: ` : '';
           msg.textContent = `✗ ${at}${tidy(st.error.message)}`;
+          // Small text: offer Fix only when the repair works. Big text: always offer it and try on click.
+          const big = text.length > MAX_TRY_FIX;
           let fixed = '';
-          if (editable) try { fixed = repairJson(text); } catch { /* not repairable: no button */ }
-          if (fixed) {
+          if (editable && !big) try { fixed = repairJson(text); } catch { /* not repairable: no button */ }
+          if (fixed || (editable && big)) {
             const fix = el('button', 'link', 'Fix JSON');
             fix.type = 'button';
             fix.title = 'Remove comments and trailing commas, quote keys and single-quoted strings, and replace True/False/None';
-            fix.addEventListener('click', () => setText(t, fixed));
+            fix.addEventListener('click', () => {
+              try { setText(t, fixed || repairJson(t.value)); }
+              catch { err.textContent = "This JSON can't be fixed automatically. The status bar shows where the first problem is."; }
+            });
             msg.append(' ', fix);
           }
           if (editable && st.error.pos != null) {
@@ -260,7 +266,8 @@ export function initPanels({ samples = {} } = {}) {
       if (sendTo) sendTo.disabled = !t.value;
       empty.hidden = !!t.value;
       clearTimeout(timer);
-      timer = setTimeout(() => { save(); update(); }, t.value.length > 200000 ? 300 : 60); // keep typing smooth in big documents
+      // Every input event anywhere lands here, so skip panels whose text didn't change (a big broken JSON is slow to check).
+      timer = setTimeout(() => { save(); if (t.value !== shown) { shown = t.value; update(); } }, t.value.length > 200000 ? 300 : 60);
     });
 
     if (persist && remember) {
@@ -269,6 +276,12 @@ export function initPanels({ samples = {} } = {}) {
       savedValue = t.value;
     }
   }
+
+  // A file dropped anywhere else would open in the tab and replace the app, losing unsaved text.
+  // Files only: cancelling every drop would also stop dragging selected text into a textarea.
+  const noFileDrop = e => { if ([...e.dataTransfer.types].includes('Files')) e.preventDefault(); };
+  addEventListener('dragover', noFileDrop);
+  addEventListener('drop', noFileDrop);
 
   // Settings menu: remember text, clear everything.
   const rememberBox = document.getElementById('remember');

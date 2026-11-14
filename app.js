@@ -1,6 +1,6 @@
 import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame,
   normalizeJson, jsonStatus, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode } from './tools.js';
-import { iconButton, refreshButtons, onRefresh, initPanels } from './panels.js';
+import { iconButton, refreshButtons, onRefresh, initPanels, el } from './panels.js';
 
 const TABS = ['format', 'compare', 'text-to-json', 'json-to-text', 'minify', 'jwt', 'encode'];
 
@@ -84,14 +84,14 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
   }
   $('#edit-texts').addEventListener('click', () => { fold(false); left.focus(); });
   const history = [];
+  // Each snapshot keeps a full copy of the changed side; capped so long merges of big files can't exhaust memory.
+  const MAX_UNDO = 100;
+  const snapshot = () => {
+    history.push({ left: left.value, right: right.value });
+    if (history.length > MAX_UNDO) history.shift();
+  };
   let current = -1;
 
-  const el = (tag, cls, text) => {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (text != null) e.textContent = text;
-    return e;
-  };
   const btn = (text, label, onClick) => {
     const b = el('button', null, text);
     b.type = 'button';
@@ -104,7 +104,7 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
 
   function copyChange(opts) {
     try {
-      history.push({ left: left.value, right: right.value });
+      snapshot();
       const r = applyCopy(left.value, right.value, opts);
       left.value = r.left;
       right.value = r.right;
@@ -265,7 +265,7 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
         }
       }
       if (out.Left !== left.value || out.Right !== right.value) {
-        history.push({ left: left.value, right: right.value });
+        snapshot();
         left.value = out.Left;
         right.value = out.Right;
       }
@@ -309,7 +309,7 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
   });
   const swap = $('#swap');
   const swapBtn = Object.assign(iconButton('swap', 'Swap', () => {
-    history.push({ left: left.value, right: right.value });
+    snapshot();
     [left.value, right.value] = [right.value, left.value];
     compare(Math.max(current, 0));
   }), { id: 'swap', title: 'Swap left and right' });
@@ -328,12 +328,6 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
   let lines = [], timer;
   view.value = '';
 
-  const el = (tag, cls, text) => {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (text != null) e.textContent = text;
-    return e;
-  };
 
   function toggle(node, collapse = !node.classList.contains('collapsed')) {
     node.classList.toggle('collapsed', collapse);
