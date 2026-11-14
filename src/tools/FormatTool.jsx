@@ -1,6 +1,7 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import Panel from '../ui/Panel.jsx';
+import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
 import { jsonLines, linesText } from '../tools.js';
 
@@ -57,6 +58,7 @@ export default function FormatTool({ hidden }) {
   const [indentSel, setIndentSel] = useState('2');
   const [sort, setSort] = useState(false);
   const [panelErr, setPanelErr] = useState('');
+  const section = useRef(null);
   useEffect(() => {
     setPanelErr('');
     const t = setTimeout(() => setSrc(input), 150);
@@ -87,7 +89,7 @@ export default function FormatTool({ hidden }) {
   const nested = useMemo(() => lines.flatMap((l, i) => (l.end != null && l.depth > 0 ? [i] : [])), [lines]);
 
   return (
-    <section data-tab="format" hidden={hidden}>
+    <section data-tab="format" hidden={hidden} ref={section}>
       <p className="desc">Pretty-print JSON with colours, line numbers and folding, like Postman.</p>
       <div className="toolbar">
         <label className="inline">Indent
@@ -98,6 +100,7 @@ export default function FormatTool({ hidden }) {
         <label className="inline"><input type="checkbox" id="fmt-sort" checked={sort} onChange={e => setSort(e.target.checked)} /> Sort keys A→Z</label>
         <button id="fmt-expand" type="button" disabled={!lines.length} onClick={() => setCollapsed(NONE)}>Expand all</button>
         <button id="fmt-collapse" type="button" disabled={!nested.length} onClick={() => setCollapsed(new Set(nested))}>Collapse all</button>
+        <SearchBox sectionRef={section} version={lines} />
       </div>
       <div className="io">
         <Panel id="fmt-in" label="JSON" ext="json" tab="format" className="in" onErr={setPanelErr} />

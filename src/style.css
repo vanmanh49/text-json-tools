@@ -195,8 +195,8 @@ body.app textarea { min-height: 0; }
   font: 13px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: break-word; color: transparent; background: var(--panel);
 }
 .hl:has(+ textarea[readonly]) { background: var(--panel-alt); }
-.editor.searching textarea { position: relative; background: transparent; }
-.editor:not(.searching) .hl { display: none; } /* it is opaque and positioned, so it would cover the textarea */
+.editor:has(> .hl:not(:empty)) textarea { position: relative; background: transparent; }
+.hl:empty { display: none; } /* it is opaque and positioned, so it would cover the textarea */
 ::highlight(find) { background-color: var(--mark); }
 ::highlight(find-current) { background-color: color-mix(in srgb, var(--mark), #ff6a00 50%); }
 .editor.dropping { outline: 2px dashed var(--accent); outline-offset: -8px; }

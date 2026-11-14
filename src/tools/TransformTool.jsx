@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Panel from '../ui/Panel.jsx';
+import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
 import { base64Decode, base64Encode, decodeJwt, jsonToText, jwtTimeNotes, minify, textToJson, urlDecode, urlEncode } from '../tools.js';
 
 // One input panel, one output panel, and the tool's function between them.
 export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
   const input = useText(inId);
+  const section = useRef(null);
   const [panelErr, setPanelErr] = useState(''); // clipboard, drop and fix messages from the panels
   const result = useMemo(() => {
     try { return { out: fn(input), error: '' }; } catch (e) { return { out: '', error: e.message }; }
@@ -14,9 +16,9 @@ export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt,
   // JSON input panels show parse errors (with line and column) in their status bar instead.
   const error = inExt === 'json' ? '' : result.error;
   return (
-    <section data-tab={tab} hidden={hidden}>
+    <section data-tab={tab} hidden={hidden} ref={section}>
       <p className="desc">{desc}</p>
-      <div className="toolbar">{toolbar}</div>
+      <div className="toolbar">{toolbar}<SearchBox sectionRef={section} version={result.out} /></div>
       <div className="io">
         <Panel id={inId} label={inLabel} ext={inExt} tab={tab} className="in" onErr={setPanelErr} />
         <Panel id={outId} label={outLabel} ext={outExt} tab={tab} className="out" readOnly value={result.out} />

@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { flushSync } from 'react-dom';
 import Panel from '../ui/Panel.jsx';
 import { IconButton } from '../ui/IconButton.jsx';
+import SearchBox from '../ui/SearchBox.jsx';
 import { textStore, useText } from '../textStore.js';
 import { applyCopy, diffBlocks, jsonStatus, normalizeJson, splitSame } from '../tools.js';
 
@@ -288,6 +289,7 @@ export default function CompareTool({ hidden }) {
         <span id="diff-count" className="muted" role="status">{countText}</span>
         <button id="undo" type="button" title="Undo last copy (Ctrl/⌘+Z)" disabled={!undoLen} onClick={undo}>Undo</button>
         <IconButton icon="swap" label="Swap" id="swap" title="Swap left and right" disabled={empty} onClick={swap} />
+        <SearchBox sectionRef={section} version={result} />
       </div>
       {/* Identical sides: an inline notice instead of a grid with nothing to merge. */}
       <p id="identical" className="notice" role="status" hidden={!blocks || total > 0}>
