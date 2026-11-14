@@ -135,11 +135,22 @@ select {
   background-repeat: no-repeat;
 }
 select:hover:not(:disabled) { border-color: var(--muted); }
-input[type="search"] { min-width: 0; width: 15em; }
-/* Search toggles (Aa, ab, .*): small square buttons, filled while on. */
-.toolbar button.opt { padding: 8px 0; width: 2.1em; font: 600 0.8rem/1.2 var(--mono); }
-.toolbar button.opt[aria-pressed="true"], .toolbar button.opt[aria-pressed="true"]:hover:not(:disabled) { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-input[type="search"][aria-invalid] { border-color: var(--error); }
+/* Search: the .search wrapper is the visible box; the input and the Aa / ab / .* toggles sit inside it. */
+.search {
+  display: inline-flex; align-items: center; gap: 1px; width: 18em; padding-right: 3px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+}
+.search input[type="search"] { flex: 1; min-width: 0; border: 0; background: none; }
+.search input[type="search"]:focus-visible { outline: none; }
+.search:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.search:has(input[aria-invalid]) { border-color: var(--error); }
+.toolbar .search button.opt {
+  flex: none; padding: 3px 0; width: 1.9em; font: 600 0.75rem/1.2 var(--mono);
+  border-color: transparent; background: none; color: var(--muted); border-radius: 4px;
+}
+.toolbar .search button.opt:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.toolbar .search button.opt[aria-pressed="true"], .toolbar .search button.opt[aria-pressed="true"]:hover:not(:disabled) { background: var(--accent); color: var(--accent-text); }
+.toolbar .search button.opt:focus-visible { outline-offset: 0; }
 button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible, .pretty:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
@@ -312,7 +323,7 @@ body.app .pretty { min-height: 0; }
   .toolbar > * { flex: none; }
   .toolbar button { padding: 6px 10px; }
   .toolbar .wide { display: none; }
-  input[type="search"] { width: 11em; }
+  .search { width: 14em; }
   .row { grid-template-columns: minmax(0, 1fr) 4.2em minmax(0, 1fr); }
   .diff .ln { display: none; }
   .pretty .line { grid-template-columns: 2.6em 1.3em minmax(0, 1fr); }

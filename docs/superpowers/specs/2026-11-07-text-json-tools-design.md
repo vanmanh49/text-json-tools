@@ -203,12 +203,15 @@ Empty input to the three JSON tools returns `''` without an error.
 - **Search (every tool):** every tool, JSON Format included, gets a search box
   (added by `panels.js`) in its toolbar, or in a new toolbar row above the
   panels.
-  - Next to the box are three toggles, as in VS Code: **Aa** match case, **ab**
+  - Inside the box, on the right, are three toggles, as in VS Code: **Aa** match case, **ab**
     whole word (letters and digits of any language and `_` count as word
     characters), and **.\*** regular expression (`^` and `$` work per line;
     empty matches are skipped). They are off by default, apply to that tool's
     search only, and are not remembered. A regex that doesn't compile shows
     "Invalid regex" and a red box border instead of matches.
+  - The visible box is a `.search` wrapper around the borderless input and the
+    toggles; it carries the border, the focus ring (while the input has focus)
+    and the red invalid border.
   - By default it finds plain text, ignoring case (`findAll`), in every visible panel and,
     on JSON Format, in the Pretty view, and on Compare, in the diff rows. It shows "N matches", then "3 of N" while
     Enter / Shift+Enter move through them. It stops counting at 2,000 ("2000+").
