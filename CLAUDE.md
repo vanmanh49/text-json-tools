@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A static, browser-only website with five tools: JSON Format (Postman-style pretty view), Text → JSON (unescape), JSON → Text (escape), JSON Minify, and Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right). No backend, no build step, no framework. The design spec and plan are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
+A static, browser-only website with seven tools: JSON Format (Postman-style pretty view), Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right), Text → JSON (unescape), JSON → Text (escape), JSON Minify, JWT Decode, and Encode/Decode (Base64, URL). No backend, no build step, no framework. The design spec and plan are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
 
 ## Commands
 
@@ -21,9 +21,10 @@ There is no linter or bundler. To deploy, upload the folder as it is.
 
 - **`tools.js`** holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `jsonLines`, `linesText`, `normalizeJson`, `decodeJwt`, `jwtTimeNotes`, `base64Encode`/`base64Decode`, `urlEncode`/`urlDecode`, `jsonStatus`/`errorLocation`, `repairJson` (the status bar's Fix JSON), `findAll`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
 - **`panels.js`** holds the chrome shared by every panel:
-  - It exports `iconButton`, `setText`, `onRefresh` / `refreshButtons` and `initPanels({ samples })`. `app.js` calls `initPanels` last, after every tool has added its listeners, because restoring saved text fires `input`.
+  - It exports `el`, `iconButton`, `setText`, `onRefresh` / `refreshButtons` and `initPanels({ samples })`. `app.js` calls `initPanels` last, after every tool has added its listeners, because restoring saved text fires `input`.
   - It wraps each panel's textarea (or the Pretty `<div>`) in an `.editor` and appends a `.status`. Whether a panel counts as JSON comes from its `.tools[data-ext="json"]`.
-  - It reads the status for that text from `jsonStatus()` / `errorLocation()` in `tools.js`, and debounces the update.
+  - It reads the status for that text from `jsonStatus()` / `errorLocation()` in `tools.js`, and debounces the update. Every `input` event anywhere refreshes every panel, so a status bar is rebuilt only when its own text changed; keep that check, or a big broken JSON on one tab stalls typing on all of them. Fix JSON tries `repairJson` up front only for text up to 1 MB (`MAX_TRY_FIX`); above that it runs on click.
+  - A window-level `dragover`/`drop` guard cancels file drops outside the input panels, which would otherwise open the file in the tab and lose unsaved text. It checks for `Files` so dragging selected text into a textarea still works.
   - Send to, drop, samples, Paste and Clear all go through `setText()`.
   - Textareas with `data-private` (the JWT token box) are never written to storage, whatever the "remember" setting says. Keep that attribute on any box that may hold secrets.
   - Search: `initSearch()` adds a search box to every section, Format included (it covers the Pretty view's token spans too). Matches are CSS Custom Highlight API ranges (`find`, `find-current`), painted on the Compare diff's `.txt` spans and, for textareas, on a transparent copy of the text (`.hl`) placed before the textarea. The textarea itself goes transparent while `.editor.searching` is set. `.hl` must keep the textarea's font, padding and wrapping, or the highlights drift.
@@ -34,7 +35,7 @@ There is no linter or bundler. To deploy, upload the folder as it is.
   - Panels whose input is JSON show parse errors in the status bar, so the tool's `.err` line stays empty for them.
   - The JSON tools, JWT and Encode/Decode share one loop over a `{tab: fn}` map. Encode/Decode's function picks the encoder from `#enc-mode`, and changing the mode re-fires `input`.
   - Compare as JSON (`#json-mode`) rewrites both textareas with `normalizeJson` before `compare()` and pushes the originals onto `history`. Every diff and copy afterwards works on that visible, normalized text.
-  - The three JSON tools share one loop over a `{tab: fn}` map. Adding a JSON tool means two things:
+  - Adding a tool to that loop means two things:
     - a new section in `index.html` with an `.in` panel, an `.out` panel and an `.err` line
     - one entry in the map
   - Panel buttons are generated, not written in HTML:
@@ -62,7 +63,7 @@ There is no linter or bundler. To deploy, upload the folder as it is.
   - Copying one row replaces the target line, inserts the line into a gap, or deletes the target line when the source has a gap.
 - Invariant, covered by tests: copying every block in one direction leaves both sides byte-identical. This includes trailing newlines, CRLF and an empty side.
 - Compare UI state in `app.js`:
-  - `history` is a stack of `{left, right}` snapshots taken before each copy, which is what Undo pops.
+  - `history` is a stack of `{left, right}` snapshots taken by `snapshot()` before each copy, swap or Compare as JSON, which is what Undo pops. It keeps the last 100 (`MAX_UNDO`), because each one holds a full copy of the changed side.
   - Typing clears it, because restoring a snapshot would throw away typed text.
   - After a copy, `compare(index)` re-renders and moves focus back to the same difference.
 - Long diffs:
