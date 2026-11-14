@@ -394,7 +394,9 @@ function initSearch(section) {
     });
     return b;
   });
-  bar.append(box, ...toggles, count);
+  const wrap = el('span', 'search'); // one bordered box: the input, then the toggles inside it on the right
+  wrap.append(box, ...toggles);
+  bar.append(wrap, count);
   let hits = [], at = -1, timer;
 
   const paint = () => {
