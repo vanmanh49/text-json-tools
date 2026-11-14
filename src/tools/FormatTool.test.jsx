@@ -2,6 +2,12 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import FormatTool from './FormatTool.jsx';
 import { textStore } from '../textStore.js';
+import { jsonLines } from '../tools.js';
+
+vi.mock('../tools.js', async importOriginal => {
+  const real = await importOriginal();
+  return { ...real, jsonLines: vi.fn(real.jsonLines) };
+});
 
 const SAMPLE = '{"b":[1,{"c":2}],"a":null}';
 
@@ -90,4 +96,13 @@ test('invalid input clears the view and leaves .err empty', () => {
   type('{bad');
   expect(view(container).children).toHaveLength(0);
   expect(container.querySelector('.err').textContent).toBe('');
+});
+
+test('typing before the debounce settles does not re-walk the Pretty tree', () => {
+  render(<FormatTool />);
+  type(SAMPLE);
+  // Rows reads every node's closing line (parts.map) each time it renders; Line is memoised, so only a Rows re-render touches it.
+  const spies = jsonLines.mock.results.at(-1).value.map(l => vi.spyOn(l.parts, 'map'));
+  act(() => textStore.set('fmt-in', SAMPLE + ' ')); // FormatTool re-renders, but src and lines are unchanged
+  expect(spies.reduce((n, s) => n + s.mock.calls.length, 0)).toBe(0);
 });

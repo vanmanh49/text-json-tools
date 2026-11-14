@@ -88,6 +88,9 @@ export default function FormatTool({ hidden }) {
   // Keep the root open so the top-level keys stay visible, as Postman does.
   const nested = useMemo(() => lines.flatMap((l, i) => (l.end != null && l.depth > 0 ? [i] : [])), [lines]);
 
+  // Memoised so keystrokes (which re-render this component before the debounce) don't re-walk the whole tree.
+  const rows = useMemo(() => <Rows items={items} lines={lines} collapsed={collapsed} onFold={onFold} />, [items, lines, collapsed, onFold]);
+
   return (
     <section data-tab="format" hidden={hidden} ref={section}>
       <p className="desc">Pretty-print JSON with colours, line numbers and folding, like Postman.</p>
@@ -107,7 +110,7 @@ export default function FormatTool({ hidden }) {
         <Panel id="fmt-out" label="Pretty" labelId="fmt-out-label" ext="json" tab="format" value={text}>
           <div id="fmt-out" className="pretty" role="region" aria-labelledby="fmt-out-label" tabIndex={0}
             style={{ '--indent': (indent === '\t' ? 4 : indent) + 'ch' }}>
-            <Rows items={items} lines={lines} collapsed={collapsed} onFold={onFold} />
+            {rows}
           </div>
         </Panel>
       </div>

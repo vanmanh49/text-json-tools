@@ -43,7 +43,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - Paste, Clear, samples, drop and Fix JSON call `setText(id, text)`. It uses `execCommand` so the browser's undo still works, then makes sure the store has the text. It uses `execCommand` only when the textarea really has focus; otherwise the command would edit whichever box is focused. It also skips `insertText` for text with more than 200 newlines, because its cost grows roughly quadratically with line count (minutes for 20,000 lines). `delete` and undo stay linear.
   - Send to writes the target id with `textStore.set` and switches the hash.
 - **Tools render their own `<section data-tab="...">` and toolbar.** `App.jsx` passes `hidden`. `SearchBox` goes at the end of the toolbar and gets `sectionRef`, `hidden` and a `version` that changes when the tool's output changes.
-  - Adding a one-in, one-out tool: a `TransformTool` wrapper with its ids and function, an entry in `NAV`, `TOOLS` and `SECTIONS` in `App.jsx`, the input id in `EDITABLE_IDS`, and a sample.
+  - Adding a one-in, one-out tool: a `TransformTool` wrapper with its ids and function, an entry in `NAV`, `TOOLS` and `SECTIONS` in `App.jsx`, the input id in `EDITABLE_IDS`, a sample, and the tab in `TABS` in `src/useHashTab.js` (or its hash falls back to `format`).
   - Panels whose input is JSON show parse errors in the status bar, so the tool's `.err` line stays empty for them.
   - Every tool call is wrapped in try/catch, and the message goes to the `.err` line.
   - Disabled states are computed in render from the text; nothing has to refresh them.
