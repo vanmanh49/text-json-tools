@@ -115,6 +115,7 @@ Empty input to the three JSON tools returns `''` without an error.
   - Panel buttons are borderless icon buttons. The loud element is the status bar's ok/error edge.
 - **Every panel:**
   - A status bar shows the line count and size. JSON panels add "✓ Valid JSON", or "✗ Line L, column C: message" with a **Go to error** link that selects the bad character and scrolls to it.
+  - On an editable JSON panel, the error also offers **Fix JSON** when `repairJson` can turn the text into valid JSON. It removes `//` and `/* */` comments and trailing commas, turns single-quoted strings into double-quoted ones, quotes bare keys, maps `True`/`False`/`None` to `true`/`false`/`null` and `undefined`/`NaN`/`Infinity` to `null`, and escapes raw line breaks inside strings, keeping the rest of the layout. It goes through `setText`, so Cmd/Ctrl+Z undoes it. It does not add missing commas, so text that still fails gets no button.
   - Error positions come from `errorLocation()`. It handles V8 positions, V8 "Unexpected token" snippets, Firefox line/column, and Safari (no position).
   - Editable panels show an empty state (Paste, Try a sample, "or drop a file here") and accept a dropped file of up to 25 MB, read locally.
   - Output panels show "The result appears here as you type." and have a **Send to…** menu that fills another tool's input and switches tab.

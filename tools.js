@@ -155,6 +155,65 @@ export function jsonStatus(text) {
   }
 }
 
+// Turns "almost JSON" (JS objects, JSONC, Python dicts) into JSON, keeping the layout: drops // and /* */
+// comments and trailing commas, turns 'single' quotes into double, quotes bare keys, maps True/False/None/
+// undefined/NaN/Infinity, and escapes raw control characters inside strings. Throws if the result still isn't JSON.
+// shortcut: doesn't insert missing commas or complete truncated input; add that if users ask for it.
+const BARE = new Map([['true', 'true'], ['false', 'false'], ['null', 'null'], ['True', 'true'], ['False', 'false'],
+  ['None', 'null'], ['undefined', 'null'], ['NaN', 'null'], ['Infinity', 'null']]);
+export function repairJson(s) {
+  if (!s.trim()) return '';
+  const o = [], n = s.length; // pieces; whitespace goes in one char at a time so it can be looked back over
+  const isWs = p => p === ' ' || p === '\t' || p === '\n' || p === '\r';
+  for (let i = 0; i < n;) {
+    const c = s[i];
+    if (c === '"' || c === "'") {
+      let str = '"', j = i + 1;
+      for (; j < n && s[j] !== c; j++) {
+        const d = s[j];
+        if (d === '\\') { j++; str += s[j] === "'" ? "'" : '\\' + (s[j] ?? ''); }
+        else if (d === '"') str += '\\"';
+        else if (d < ' ') str += JSON.stringify(d).slice(1, -1);
+        else str += d;
+      }
+      o.push(str + '"');
+      i = j + 1;
+    } else if (c === '/' && (s[i + 1] === '/' || s[i + 1] === '*')) {
+      if (s[i + 1] === '/') while (i < n && s[i] !== '\n' && s[i] !== '\r') i++;
+      else { const e = s.indexOf('*/', i + 2); i = e < 0 ? n : e + 2; }
+      while (o.at(-1) === ' ' || o.at(-1) === '\t') o.pop();
+      if (!o.length || o.at(-1) === '\n') { // the comment had its own line: drop that line
+        while (s[i] === ' ' || s[i] === '\t') i++;
+        if (s[i] === '\r') i++;
+        if (s[i] === '\n') i++;
+      }
+    } else if (/[\p{L}_$]/u.test(c)) {
+      let j = i + 1;
+      while (j < n && /[\p{L}\p{N}_$]/u.test(s[j])) j++;
+      const w = s.slice(i, j);
+      let k = j;
+      while (isWs(s[k])) k++;
+      if (s[k] === ':') o.push(JSON.stringify(w));
+      else {
+        if (w === 'Infinity' && o.at(-1) === '-') o.pop();
+        o.push(BARE.get(w) ?? w);
+      }
+      i = j;
+    } else {
+      if (c === '}' || c === ']') {
+        let k = o.length;
+        while (k && isWs(o[k - 1])) k--;
+        if (o[k - 1] === ',') o.splice(k - 1, 1);
+      }
+      o.push(c);
+      i++;
+    }
+  }
+  const out = o.join('');
+  JSON.parse(out);
+  return out;
+}
+
 export function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;

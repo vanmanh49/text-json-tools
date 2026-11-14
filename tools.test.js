@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson } from './tools.js';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -279,4 +279,35 @@ test('findAll: case-insensitive plain-text matches with offsets into the origina
   assert.deepEqual(findAll('aaaa', 'aa'), [[0, 2], [2, 4]]);
   assert.deepEqual(findAll('aaaa', 'a', 2), [[0, 1], [1, 2]]);
   assert.deepEqual(findAll('abc', ''), []);
+});
+
+test('repairJson fixes comments, trailing commas, quotes, bare keys and Python literals', () => {
+  const broken = `{
+  // owner
+  name: 'Ann "A"',  /* nickname */
+  'it\\'s': True,
+  tags: ['x', 'y',],
+  none: None, n: NaN, low: -Infinity,
+}`;
+  assert.equal(repairJson(broken), `{
+  "name": "Ann \\"A\\"",
+  "it's": true,
+  "tags": ["x", "y"],
+  "none": null, "n": null, "low": null
+}`);
+});
+test('repairJson escapes raw line breaks and tabs inside strings', () => {
+  assert.deepEqual(JSON.parse(repairJson('{"a": "line1\nline2\tend"}')), { a: 'line1\nline2\tend' });
+});
+test('repairJson leaves comment-like text inside strings alone', () => {
+  assert.equal(repairJson('{"url": "http://x.com/*a*/"}'), '{"url": "http://x.com/*a*/"}');
+});
+test('repairJson keeps unicode bare keys and valid JSON as is', () => {
+  assert.equal(repairJson('{café: 1}'), '{"café": 1}');
+  assert.equal(repairJson('[1, {"a": [true, null]}]'), '[1, {"a": [true, null]}]');
+  assert.equal(repairJson('  '), '');
+});
+test('repairJson throws when it cannot produce valid JSON', () => {
+  assert.throws(() => repairJson('{"a": 1 "b": 2}'));
+  assert.throws(() => repairJson('{a: foo}'));
 });

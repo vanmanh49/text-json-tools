@@ -19,7 +19,7 @@ There is no linter or bundler. To deploy, upload the folder as it is.
 
 ## Architecture
 
-- **`tools.js`** holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `jsonLines`, `linesText`, `normalizeJson`, `decodeJwt`, `jwtTimeNotes`, `base64Encode`/`base64Decode`, `urlEncode`/`urlDecode`, `jsonStatus`/`errorLocation`, `findAll`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
+- **`tools.js`** holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `jsonLines`, `linesText`, `normalizeJson`, `decodeJwt`, `jwtTimeNotes`, `base64Encode`/`base64Decode`, `urlEncode`/`urlDecode`, `jsonStatus`/`errorLocation`, `repairJson` (the status bar's Fix JSON), `findAll`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
 - **`panels.js`** holds the chrome shared by every panel:
   - It exports `iconButton`, `setText`, `onRefresh` / `refreshButtons` and `initPanels({ samples })`. `app.js` calls `initPanels` last, after every tool has added its listeners, because restoring saved text fires `input`.
   - It wraps each panel's textarea (or the Pretty `<div>`) in an `.editor` and appends a `.status`. Whether a panel counts as JSON comes from its `.tools[data-ext="json"]`.

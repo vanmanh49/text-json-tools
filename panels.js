@@ -1,6 +1,6 @@
 // Panel chrome shared by every tool: the buttons in each panel header, the status bar, the empty
 // state, file drop, "Send to", remembered text and the theme switch. Tool logic lives in app.js.
-import { jsonStatus, formatSize, findAll } from './tools.js';
+import { jsonStatus, formatSize, findAll, repairJson } from './tools.js';
 
 // Static icon markup (never user text), stroke icons in the Lucide style.
 const ICONS = {
@@ -218,6 +218,15 @@ export function initPanels({ samples = {} } = {}) {
         else {
           const at = st.error.line ? `Line ${st.error.line}, column ${st.error.col}: ` : '';
           msg.textContent = `✗ ${at}${tidy(st.error.message)}`;
+          let fixed = '';
+          if (editable) try { fixed = repairJson(text); } catch { /* not repairable: no button */ }
+          if (fixed) {
+            const fix = el('button', 'link', 'Fix JSON');
+            fix.type = 'button';
+            fix.title = 'Remove comments and trailing commas, quote keys and single-quoted strings, and replace True/False/None';
+            fix.addEventListener('click', () => setText(t, fixed));
+            msg.append(' ', fix);
+          }
           if (editable && st.error.pos != null) {
             const go = el('button', 'link', 'Go to error');
             go.type = 'button';
