@@ -21,23 +21,28 @@ No backend, accounts, history, share links, file upload, or analytics.
 ## Constraints
 
 - Static files only. Built with Vite (`npm run build`). GitHub Actions deploys `dist/` to GitHub Pages on every push to `main`; `dist/` also works on any static host.
-- Plain HTML + CSS + JS (ES modules).
-- One runtime dependency: `jsdiff` (`diff@9.0.0`), loaded in the browser from
-  `vendor/diff-9.0.0.js` (the jsDelivr `+esm` bundle, kept in the repo so a blocked CDN cannot blank the page) through an import map
-  that maps the bare specifier `"diff"`. Node tests resolve the same `"diff"` from
-  `node_modules` (devDependency, same version).
+- React 19 with plain CSS and JS (ES modules, JSX).
+- Runtime dependencies: React, React DOM and `jsdiff` (`diff@9.0.0`), installed
+  from npm and bundled into `dist/` by Vite, so the page loads no third-party
+  script. The tests import the same `"diff"` from `node_modules`.
 - Works on desktop and phone widths, light and dark theme.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Page shell, tab nav, one section per tool, import map |
-| `style.css` | Layout, color tokens, light/dark, responsive |
-| `app.js` | DOM wiring: tabs, input events, copy, rendering. No tool logic. |
-| `tools.js` | Pure functions, no DOM |
-| `tools.test.js` | `node --test` suite for `tools.js` |
-| `package.json` | `"type": "module"`, devDependency `diff@9.0.0`, `"test": "node --test"` |
+| `index.html` | Page shell: `#root`, font preloads, the inline script that applies the saved theme before first paint |
+| `vite.config.js` | Vite + React, `base: './'`, Vitest with jsdom |
+| `public/fonts/` | IBM Plex woff2 subsets, copied to `dist/fonts/` |
+| `src/main.jsx`, `src/App.jsx` | Entry, top bar, tab nav, theme, settings menu, one section per tool |
+| `src/tools/` | One component per tool: `TransformTool.jsx` (the five one-in, one-out tools), `FormatTool.jsx`, `CompareTool.jsx`. No tool logic. |
+| `src/ui/` | `Panel`, `StatusBar`, `SearchBox`, `IconButton` |
+| `src/textStore.js`, `src/setText.js`, `src/store.js`, `src/globals.js` | Panel text and storage, undo-friendly text replace, page-wide listeners |
+| `src/style.css` | Layout, color tokens, light/dark, responsive |
+| `src/tools.js` | Pure functions, no DOM |
+| `src/**/*.test.js(x)` | Vitest suites: `tools.js` and the components |
+| `package.json` | `"type": "module"`, dependencies `react`, `react-dom`, `diff@9.0.0`; scripts `dev`, `build`, `preview`, `"test": "vitest run"` |
+| `.github/workflows/deploy.yml` | On push to `main`: tests, build, publish `dist/` to GitHub Pages |
 
 The active tab comes from the URL hash: `#format`, `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#jwt`, `#encode`.
 An empty or unknown hash shows `#format`.
@@ -110,7 +115,7 @@ Empty input to the three JSON tools returns `''` without an error.
   - Format and the three JSON tools fill the screen (`body.app`), and their panels scroll inside. Compare scrolls the page.
   - Under 700px the panels stack and the tabs scroll sideways.
 - **Look:**
-  - IBM Plex Sans for the interface and IBM Plex Mono for editors, both kept in `vendor/fonts`.
+  - IBM Plex Sans for the interface and IBM Plex Mono for editors, both kept in `public/fonts`.
   - The palette comes from JSON's token colours.
   - Panel buttons are borderless icon buttons. The loud element is the status bar's ok/error edge.
 - **Every panel:**
@@ -201,8 +206,7 @@ Empty input to the three JSON tools returns `''` without an error.
       undoes the last copy. These are ignored while focus is in a textarea,
       input or select.
 - **Search (every tool):** every tool, JSON Format included, gets a search box
-  (added by `panels.js`) in its toolbar, or in a new toolbar row above the
-  panels.
+  (the `SearchBox` component) at the end of its toolbar.
   - Inside the box, on the right, are three toggles, as in VS Code: **Aa** match case, **ab**
     whole word (letters and digits of any language and `_` count as word
     characters), and **.\*** regular expression (`^` and `$` work per line;
@@ -239,7 +243,7 @@ Empty input to the three JSON tools returns `''` without an error.
 
 ## Error handling
 
-- Every tool call in `app.js` is wrapped in try/catch. On error, the output is
+- Every tool call in the tool components is wrapped in try/catch. On error, the output is
   cleared and `err.message` is shown in the error line. Modern browsers include
   the position or line and column in it.
 - Known limit, noted in code: `JSON.parse` loses precision on integers above
@@ -247,7 +251,7 @@ Empty input to the three JSON tools returns `''` without an error.
 
 ## Testing
 
-- `tools.test.js` with `node:test` and `node:assert`:
+- `src/tools.test.js` with Vitest and `node:assert`:
   - `textToJson`: quoted escaped string, unquoted `{\"a\":1}`, plain JSON object
     (pretty-printed as is), invalid input throws, empty → `''`.
   - `jsonToText`: round trip `textToJson(jsonToText(x))` equals pretty `x`;
