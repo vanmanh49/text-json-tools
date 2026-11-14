@@ -291,8 +291,6 @@ body.app .pretty { min-height: 0; }
 .pretty .summary { display: none; }
 .pretty .node.collapsed > .kids, .pretty .node.collapsed > .line:last-child { display: none; }
 .pretty .node.collapsed > .line:first-child .summary { display: inline; }
-.pretty mark { background: var(--mark); color: inherit; border-radius: 2px; }
-.pretty mark.current { outline: 2px solid var(--accent); }
 
 /* Phones and narrow windows: stacked panels on a scrolling page */
 @media (max-width: 700px) {

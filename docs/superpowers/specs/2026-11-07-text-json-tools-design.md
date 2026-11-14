@@ -131,8 +131,8 @@ Empty input to the three JSON tools returns `''` without an error.
   - A folded node shows `{…} 3 keys` or `[…] 2 items`. Line numbers keep their
     original values while folded.
   - Collapse all keeps the root open.
-  - Search highlights matches inside single tokens and unfolds their ancestors.
-    Enter and Shift+Enter cycle through the matches.
+  - Search (the shared one below) covers both panels; Pretty-view matches sit
+    inside single tokens, and going to one unfolds its ancestors.
   - The Pretty panel's Copy and Download give `linesText` output, without line
     numbers or fold markers.
   - Invalid JSON clears the view and shows the parse error.
@@ -153,7 +153,7 @@ Empty input to the three JSON tools returns `''` without an error.
     Clear's `delete` stays fast at any size, so it is always undoable.
   - Buttons that need content are disabled while there is none: Copy, Clear and
     Download on an empty panel (Paste stays enabled), Compare and Swap when both
-    sides are empty, and the JSON Format Expand all, Collapse all and search
+    sides are empty, and the JSON Format Expand all and Collapse all
     when there is no formatted view. Collapse all is also disabled when nothing
     is nested below the root.
   - If the browser blocks clipboard reading, the section's error line tells the
@@ -199,16 +199,17 @@ Empty input to the three JSON tools returns `''` without an error.
       Alt+← copy the current difference to the right or left, and Ctrl/⌘+Z
       undoes the last copy. These are ignored while focus is in a textarea,
       input or select.
-- **Search (every tool):** JSON Format keeps its Pretty-view search. Every other
-  tool gets a search box (added by `panels.js`) in its toolbar, or in a new
-  toolbar row above the panels.
+- **Search (every tool):** every tool, JSON Format included, gets a search box
+  (added by `panels.js`) in its toolbar, or in a new toolbar row above the
+  panels.
   - It finds plain text, ignoring case (`findAll`), in every visible panel and,
-    on Compare, in the diff rows. It shows "N matches", then "3 of N" while
+    on JSON Format, in the Pretty view, and on Compare, in the diff rows. It shows "N matches", then "3 of N" while
     Enter / Shift+Enter move through them. It stops counting at 2,000 ("2000+").
   - Matches are painted with the CSS Custom Highlight API. A textarea doesn't
     show a selection while the search box has focus, so a transparent copy of
     its text (`.hl`) sits behind it and takes the paint. Going to a match in a
-    collapsed unchanged run expands that run.
+    collapsed unchanged run expands that run, and one in a folded Pretty-view
+    node unfolds it.
   - The matches refresh when the text changes, on resize, and when the tab is
     shown.
 - **Focus and shortcuts (every tool):**

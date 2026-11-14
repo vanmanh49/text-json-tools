@@ -26,7 +26,7 @@ There is no linter or bundler. To deploy, upload the folder as it is.
   - It reads the status for that text from `jsonStatus()` / `errorLocation()` in `tools.js`, and debounces the update.
   - Send to, drop, samples, Paste and Clear all go through `setText()`.
   - Textareas with `data-private` (the JWT token box) are never written to storage, whatever the "remember" setting says. Keep that attribute on any box that may hold secrets.
-  - Search: `initSearch()` adds a search box to every section without one; Format has its own Pretty-view search. Matches are CSS Custom Highlight API ranges (`find`, `find-current`), painted on the Compare diff's `.txt` spans and, for textareas, on a transparent copy of the text (`.hl`) placed before the textarea. The textarea itself goes transparent while `.editor.searching` is set. `.hl` must keep the textarea's font, padding and wrapping, or the highlights drift.
+  - Search: `initSearch()` adds a search box to every section, Format included (it covers the Pretty view's token spans too). Matches are CSS Custom Highlight API ranges (`find`, `find-current`), painted on the Compare diff's `.txt` spans and, for textareas, on a transparent copy of the text (`.hl`) placed before the textarea. The textarea itself goes transparent while `.editor.searching` is set. `.hl` must keep the textarea's font, padding and wrapping, or the highlights drift.
   - Shortcuts: Ctrl/⌘+F focuses the visible section's `input[type="search"]`. A `paste` event outside an editable field goes to the first empty editable textarea of the visible section. A `beforeinput` guard cancels `history*` (undo/redo) aimed at any element other than the focused one, because the browser's undo history is page-wide and Ctrl/⌘+Z in a search box used to wipe the panels. Keep it.
   - Storage: `tjt:settings` (`{ remember }`), `tjt:theme`, `tjt:text:<textarea id>`. Every access goes through the try/catch `store` helper. An inline script in `<head>` applies the theme before first paint.
 - **`app.js`** only wires the DOM to those functions:
@@ -80,7 +80,7 @@ There is no linter or bundler. To deploy, upload the folder as it is.
 - The Pretty view is a `<div>`, not a textarea, so `app.js` stores its text on `view.value`. That is what the generic panel Copy/Download buttons read.
 - Panel tools add Paste and Clear only for `TEXTAREA`s that aren't readonly.
 - Folding works through nesting. `build()` nests each non-empty object/array as `.node > (.line, .kids, .line)` using `end`, and `.node.collapsed` hides `.kids` and the closing line through CSS. Line numbers are fixed per line, so they keep their values while folded.
-- Search wraps matches in `<mark>` inside token spans. Before a new search, `highlight()` rebuilds the view and carries over which nodes were folded.
+- Search is the shared `initSearch()` one: it paints highlight ranges on the token spans (no `<mark>`, no rebuild), and going to a match inside a folded node clicks its `.fold` buttons open.
 - Shared class names: `.ln` is used by both the Compare grid (`.diff .ln`) and the Pretty view (`.pretty .ln`). Scope any rule for one of them, or it breaks the other. An unscoped mobile `.ln { display: none }` once collapsed the Pretty view's columns.
 
 ## Known, accepted limits

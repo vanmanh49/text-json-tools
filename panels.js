@@ -340,7 +340,7 @@ export function initPanels({ samples = {} } = {}) {
   refreshButtons();
 }
 
-// Search box for a tool: finds text in its visible panels and, on Compare, in the diff.
+// Search box for a tool: finds text in its visible panels, the Format Pretty view and the Compare diff.
 // Matches are painted with the CSS Custom Highlight API. A textarea hides its selection while the
 // search box has focus, so each one gets a transparent copy of its text (.hl) laid behind it to paint on.
 const MAX_HITS = 2000; // more makes typing in the box sluggish on big documents
@@ -387,7 +387,8 @@ function initSearch(section) {
       hl.scrollTop = t.scrollTop;
       collect(hl.firstChild, q);
     }
-    if (q) for (const s of section.querySelectorAll('.diff .txt')) collect(s.firstChild, q);
+    // shortcut: a Pretty-view match must sit inside one token (key, value, punctuation), not span tokens.
+    if (q) for (const s of section.querySelectorAll('.diff .txt, .pretty .code > span:not(.summary)')) collect(s.firstChild, q);
     paint();
     count.textContent = !q ? '' : !hits.length ? 'No matches'
       : `${hits.length >= MAX_HITS ? MAX_HITS + '+' : hits.length} match${hits.length > 1 ? 'es' : ''}`;
@@ -403,6 +404,7 @@ function initSearch(section) {
     } else {
       const hidden = host.closest('.hidden-lines');
       if (hidden?.hidden) hidden.previousElementSibling.click(); // its "⋯ N unchanged lines" button
+      for (let n = host.closest('.node.collapsed'); n; n = n.parentElement.closest('.node.collapsed')) n.querySelector('.fold').click(); // Pretty view folds
       host.scrollIntoView({ block: 'center' });
     }
     paint();

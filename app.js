@@ -324,8 +324,8 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
   const section = document.querySelector('section[data-tab="format"]');
   const $ = sel => section.querySelector(sel);
   const input = $('#fmt-in'), view = $('#fmt-out'), err = $('.err');
-  const indentSel = $('#fmt-indent'), sortBox = $('#fmt-sort'), search = $('#fmt-search'), countEl = $('#fmt-count');
-  let lines = [], marks = [], markAt = -1, timer;
+  const indentSel = $('#fmt-indent'), sortBox = $('#fmt-sort');
+  let lines = [], timer;
   view.value = '';
 
   const el = (tag, cls, text) => {
@@ -404,7 +404,6 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
       lines = [];
       view.value = '';
       view.replaceChildren();
-      countEl.textContent = '';
       // the input panel's status bar shows the parse error with its line and column
       refreshButtons();
       return;
@@ -414,58 +413,19 @@ encMode.addEventListener('change', () => document.getElementById('enc-in').dispa
     view.value = linesText(lines, indent);
     view.style.setProperty('--indent', (indent === '\t' ? 4 : indent) + 'ch');
     build();
-    highlight();
     refreshButtons();
   }
   const expandBtn = $('#fmt-expand'), collapseBtn = $('#fmt-collapse');
   onRefresh(() => {
     const none = !lines.length;
-    expandBtn.disabled = collapseBtn.disabled = search.disabled = none;
+    expandBtn.disabled = collapseBtn.disabled = none;
     // Collapse all keeps the root open, so it only helps when something is nested below it.
     if (!none) collapseBtn.disabled = !view.querySelector('.node .node');
   });
 
-  // Rebuilds (keeping folds), wraps matches in <mark>, and unfolds the nodes that contain them.
-  // shortcut: matches within one token only (a key, a value, punctuation), not across tokens.
-  function highlight() {
-    const q = search.value.trim().toLowerCase();
-    if (marks[0]?.isConnected) build(new Set([...view.querySelectorAll('.node.collapsed')].map(n => +n.dataset.i)));
-    marks = [];
-    markAt = -1;
-    if (!q || !lines.length) { countEl.textContent = ''; return; }
-    for (const span of view.querySelectorAll('.code > span:not(.summary)')) {
-      const text = span.textContent, lower = text.toLowerCase();
-      let at = lower.indexOf(q);
-      if (at < 0) continue;
-      span.textContent = '';
-      let pos = 0;
-      for (; at >= 0; at = lower.indexOf(q, pos)) {
-        span.append(text.slice(pos, at));
-        const m = el('mark', null, text.slice(at, at + q.length));
-        span.append(m);
-        marks.push(m);
-        pos = at + q.length;
-      }
-      span.append(text.slice(pos));
-      for (let k = span.closest('.kids'); k; k = k.parentElement.closest('.kids')) toggle(k.parentElement, false);
-    }
-    countEl.textContent = marks.length ? `${marks.length} match${marks.length > 1 ? 'es' : ''}` : 'No matches';
-  }
-
-  function nextMark(step) {
-    if (!marks.length) return;
-    marks[markAt]?.classList.remove('current');
-    markAt = (markAt + step + marks.length) % marks.length;
-    marks[markAt].classList.add('current');
-    marks[markAt].scrollIntoView({ block: 'center' });
-    countEl.textContent = `${markAt + 1} of ${marks.length}`;
-  }
-
   input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(render, 150); });
   indentSel.addEventListener('change', render);
   sortBox.addEventListener('change', render);
-  search.addEventListener('input', highlight);
-  search.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nextMark(e.shiftKey ? -1 : 1); } });
   $('#fmt-expand').addEventListener('click', () => view.querySelectorAll('.node').forEach(n => toggle(n, false)));
   // Keep the root open so the top-level keys stay visible, as Postman does.
   $('#fmt-collapse').addEventListener('click', () => view.querySelectorAll('.node .node').forEach(n => toggle(n, true)));
