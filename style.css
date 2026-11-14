@@ -136,6 +136,10 @@ select {
 }
 select:hover:not(:disabled) { border-color: var(--muted); }
 input[type="search"] { min-width: 0; width: 15em; }
+/* Search toggles (Aa, ab, .*): small square buttons, filled while on. */
+.toolbar button.opt { padding: 8px 0; width: 2.1em; font: 600 0.8rem/1.2 var(--mono); }
+.toolbar button.opt[aria-pressed="true"], .toolbar button.opt[aria-pressed="true"]:hover:not(:disabled) { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+input[type="search"][aria-invalid] { border-color: var(--error); }
 button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible, .pretty:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }

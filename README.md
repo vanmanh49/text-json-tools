@@ -12,7 +12,7 @@ A static website with seven text and JSON utilities. Everything runs in the brow
 | **JSON → Text** | Escapes JSON into a single string literal. | `{ "name": "Ann" }` → `"{\"name\":\"Ann\"}"` |
 | **JSON Minify** | Minifies formatted JSON onto one line. | multi-line JSON → `{"a":[1,2]}` |
 
-Every tool has a search box: Ctrl/⌘+F jumps to it, and Enter / Shift+Enter go to the next / previous match. Opening a tool puts the cursor in its input, and Ctrl/⌘+V pressed anywhere else on the page pastes into that input.
+Every tool has a search box: Ctrl/⌘+F jumps to it, and Enter / Shift+Enter go to the next / previous match. Its toggles turn on **Aa** match case, **ab** whole word and **.\*** regular expressions. Opening a tool puts the cursor in its input, and Ctrl/⌘+V pressed anywhere else on the page pastes into that input.
 
 Each tool has its own link: `#format` (the default), `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#jwt`, `#encode`.
 

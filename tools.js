@@ -291,14 +291,20 @@ export function jwtTimeNotes(payload, now = Date.now() / 1000) {
   return notes;
 }
 
-// [start, end] of each case-insensitive match of `q` in `text`, at most `limit`. `q` is plain text, not a pattern.
-export function findAll(text, q, limit = Infinity) {
+// [start, end] of each match of `q` in `text`, at most `limit`. Ignores case unless `matchCase`; `q` is plain
+// text unless `regex` (then ^ and $ work per line); `wholeWord` needs a non-word character (or the edge) on
+// both sides, where word characters are letters and digits of any language and _. Empty matches are skipped.
+// Throws SyntaxError on a bad regex. A regex also keeps offsets in the original string; lowercasing first can
+// change its length (e.g. 'İ').
+// shortcut: a catastrophically backtracking regex can hang the tab; it is the user's own pattern on their own text.
+export function findAll(text, q, limit = Infinity, { matchCase = false, wholeWord = false, regex = false } = {}) {
   const out = [];
   if (!q) return out;
-  // A regex keeps offsets in the original string; lowercasing first can change its length (e.g. 'İ').
-  for (const m of text.matchAll(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'))) {
+  let src = regex ? q : q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (wholeWord) src = `(?<![\\p{L}\\p{N}_])(?:${src})(?![\\p{L}\\p{N}_])`;
+  for (const m of text.matchAll(new RegExp(src, matchCase ? 'gmu' : 'gimu'))) {
     if (out.length >= limit) break;
-    out.push([m.index, m.index + m[0].length]);
+    if (m[0]) out.push([m.index, m.index + m[0].length]);
   }
   return out;
 }
