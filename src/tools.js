@@ -1,4 +1,5 @@
 import { diffArrays } from 'diff';
+import QRCode from 'qrcode';
 
 // shortcut: JSON.parse loses precision above 2^53 and keeps only the last duplicate key; swap in a lossless parser if users hit it.
 
@@ -307,4 +308,22 @@ export function findAll(text, q, limit = Infinity, { matchCase = false, wholeWor
     if (m[0]) out.push([m.index, m.index + m[0].length]);
   }
   return out;
+}
+
+// QR code for `s` (UTF-8, error correction M) as a black-on-white SVG with a 4-module quiet zone.
+export function qrSvg(s) {
+  if (!s.trim()) return '';
+  const { size, data } = QRCode.create(s, { errorCorrectionLevel: 'M' }).modules; // throws when the text is too long
+  let d = '';
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (!data[y * size + x]) continue;
+      let run = 1; // one rectangle per horizontal run of dark modules
+      while (x + run < size && data[y * size + x + run]) run++;
+      d += `M${x + 4} ${y + 4}h${run}v1h-${run}z`;
+      x += run - 1;
+    }
+  }
+  const n = size + 8;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges"><rect width="${n}" height="${n}" fill="#fff"/><path d="${d}"/></svg>`;
 }

@@ -16,7 +16,7 @@ test('unknown hash shows format', () => {
   location.hash = '#nope';
   const { container } = render(<App />);
   expect(container.querySelector('section[data-tab="format"]').hidden).toBe(false);
-  expect(hiddenTabs(container)).toHaveLength(6);
+  expect(hiddenTabs(container)).toHaveLength(7);
 });
 
 test('hashchange switches tab and sets aria-current', () => {

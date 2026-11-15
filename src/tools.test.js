@@ -1,6 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg } from './tools.js';
+import jsQR from 'jsqr';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -312,4 +313,25 @@ test('repairJson keeps unicode bare keys and valid JSON as is', () => {
 test('repairJson throws when it cannot produce valid JSON', () => {
   assert.throws(() => repairJson('{"a": 1 "b": 2}'));
   assert.throws(() => repairJson('{a: foo}'));
+});
+
+// Paints qrSvg's rectangles at 4 px per module and reads them back with jsQR, the decoder the QR tool uses.
+function scanSvg(svg) {
+  const n = Number(svg.match(/viewBox="0 0 (\d+)/)[1]), px = 4, w = n * px;
+  const rgba = new Uint8ClampedArray(w * w * 4).fill(255);
+  for (const [, x, y, run] of svg.matchAll(/M(\d+) (\d+)h(\d+)/g)) {
+    for (let dy = 0; dy < px; dy++) for (let dx = 0; dx < run * px; dx++) {
+      const i = ((y * px + dy) * w + x * px + dx) * 4;
+      rgba[i] = rgba[i + 1] = rgba[i + 2] = 0;
+    }
+  }
+  return jsQR(rgba, w, w)?.data;
+}
+test('qrSvg round-trips through the decoder, UTF-8 included', () => {
+  for (const s of ['https://example.com/?q=1', 'Xin chào, thế giới! 🎉', 'line 1\nline 2', 'x'.repeat(1000)]) assert.equal(scanSvg(qrSvg(s)), s);
+});
+test('qrSvg returns empty for blank text and throws when too long', () => {
+  assert.equal(qrSvg(''), '');
+  assert.equal(qrSvg('  \n'), '');
+  assert.throws(() => qrSvg('x'.repeat(5000)), /too big/);
 });

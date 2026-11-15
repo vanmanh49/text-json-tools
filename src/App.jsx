@@ -6,8 +6,9 @@ import { IconButton } from './ui/IconButton.jsx';
 import { TextToJson, JsonToText, Minify, Jwt, Encode } from './tools/TransformTool.jsx';
 import FormatTool from './tools/FormatTool.jsx';
 import CompareTool from './tools/CompareTool.jsx';
+import QrTool from './tools/QrTool.jsx';
 
-const TOOLS = { format: FormatTool, compare: CompareTool, 'text-to-json': TextToJson, 'json-to-text': JsonToText, minify: Minify, jwt: Jwt, encode: Encode };
+const TOOLS = { format: FormatTool, compare: CompareTool, 'text-to-json': TextToJson, 'json-to-text': JsonToText, minify: Minify, jwt: Jwt, encode: Encode, qr: QrTool };
 
 // Theme: System → Light → Dark. The initial value is applied by an inline script in <head>.
 const THEMES = ['system', 'light', 'dark'];
