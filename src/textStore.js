@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { store, settings, MAX_SAVE } from './store.js';
 
-export const PRIVATE_IDS = new Set(['jwt-in']);
-export const EDITABLE_IDS = ['fmt-in', 't2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'left', 'right'];
+export const PRIVATE_IDS = new Set(['jwt-in', 'qr-in']);
+export const EDITABLE_IDS = ['fmt-in', 't2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'qr-in', 'left', 'right'];
 const PERSISTED = EDITABLE_IDS.filter(id => !PRIVATE_IDS.has(id));
 const key = id => 'tjt:text:' + id;
 

@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A static, browser-only website with seven tools: JSON Format (Postman-style pretty view), Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right), Text → JSON (unescape), JSON → Text (escape), JSON Minify, JWT Decode, and Encode/Decode (Base64, URL). No backend. Built with Vite and React 19; the output in `dist/` is plain static files. The design spec and plans are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
+A static, browser-only website with eight tools: JSON Format (Postman-style pretty view), Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right), Text → JSON (unescape), JSON → Text (escape), JSON Minify, JWT Decode, Encode/Decode (Base64, URL), and QR Code (text ⇄ QR image). No backend. Built with Vite and React 19; the output in `dist/` is plain static files. The design spec and plans are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
 
 ## Commands
 
 ```bash
-npm install                     # React, jsdiff, Vite, Vitest
+npm install                     # React, jsdiff, qrcode, jsQR, Vite, Vitest
 npm run dev                     # dev server with hot reload
 npm test                        # vitest run (jsdom)
 npx vitest run -t "copy"        # run tests whose name matches
@@ -36,7 +36,8 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - `ui/SearchBox.jsx`: the search box and its toggles.
   - `tools/TransformTool.jsx`: Text → JSON, JSON → Text, Minify, JWT and Encode/Decode, all one input panel → function → output panel.
   - `tools/FormatTool.jsx`, `tools/CompareTool.jsx`: the two bigger tools.
-  - `tools.js` holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `splitSame`, `jsonLines`, `linesText`, `normalizeJson`, `decodeJwt`, `jwtTimeNotes`, `base64Encode`/`base64Decode`, `urlEncode`/`urlDecode`, `jsonStatus`/`errorLocation`, `repairJson` (the status bar's Fix JSON), `findAll`, `formatSize`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
+  - `tools/QrTool.jsx`: QR Code. Text panel → `qrSvg` image; an image dropped on the QR panel, opened, or pasted (image and no text on the clipboard) is decoded with a lazily imported `jsqr` (its own chunk) into the Text panel. jsdom has no canvas, so decoding is tested in `tools.test.js` by rasterising `qrSvg` output, and in a real browser.
+  - `tools.js` holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `splitSame`, `jsonLines`, `linesText`, `normalizeJson`, `decodeJwt`, `jwtTimeNotes`, `base64Encode`/`base64Decode`, `urlEncode`/`urlDecode`, `jsonStatus`/`errorLocation`, `repairJson` (the status bar's Fix JSON), `qrSvg`, `findAll`, `formatSize`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
 - **Text goes through `textStore`.**
   - Editable textareas are controlled: their value is `useText(id)` and `onChange` calls `textStore.set`.
   - Never `t.value = …` plus a synthetic input event: React ignores it, so go through `textStore.set`.

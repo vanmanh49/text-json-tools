@@ -22,7 +22,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 
 - Static files only. Built with Vite (`npm run build`). GitHub Actions deploys `dist/` to GitHub Pages on every push to `main`; `dist/` also works on any static host.
 - React 19 with plain CSS and JS (ES modules, JSX).
-- Runtime dependencies: React, React DOM and `jsdiff` (`diff@9.0.0`), installed
+- Runtime dependencies: React, React DOM, `jsdiff` (`diff@9.0.0`), `qrcode@1.5.4` and `jsqr@1.4.0`, installed
   from npm and bundled into `dist/` by Vite, so the page loads no third-party
   script. The tests import the same `"diff"` from `node_modules`.
 - Works on desktop and phone widths, light and dark theme.
@@ -35,7 +35,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 | `vite.config.js` | Vite + React, `base: './'`, Vitest with jsdom |
 | `public/fonts/` | IBM Plex woff2 subsets, copied to `dist/fonts/` |
 | `src/main.jsx`, `src/App.jsx` | Entry, top bar, tab nav, theme, settings menu, one section per tool |
-| `src/tools/` | One component per tool: `TransformTool.jsx` (the five one-in, one-out tools), `FormatTool.jsx`, `CompareTool.jsx`. No tool logic. |
+| `src/tools/` | One component per tool: `TransformTool.jsx` (the five one-in, one-out tools), `FormatTool.jsx`, `CompareTool.jsx`, `QrTool.jsx`. No tool logic except reading an image in `QrTool`. |
 | `src/ui/` | `Panel`, `StatusBar`, `SearchBox`, `IconButton` |
 | `src/textStore.js`, `src/setText.js`, `src/store.js`, `src/globals.js` | Panel text and storage, undo-friendly text replace, page-wide listeners |
 | `src/style.css` | Layout, color tokens, light/dark, responsive |
@@ -44,7 +44,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 | `package.json` | `"type": "module"`, dependencies `react`, `react-dom`, `diff@9.0.0`; scripts `dev`, `build`, `preview`, `"test": "vitest run"` |
 | `.github/workflows/deploy.yml` | On push to `main`: tests, build, publish `dist/` to GitHub Pages |
 
-The active tab comes from the URL hash: `#format`, `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#jwt`, `#encode`.
+The active tab comes from the URL hash: `#format`, `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#jwt`, `#encode`, `#qr`.
 An empty or unknown hash shows `#format`.
 
 ## Functions (`tools.js`)
@@ -105,6 +105,10 @@ Empty input to the three JSON tools returns `''` without an error.
 - **Encode / Decode (`#encode`):** a mode picker for Base64 encode, Base64 decode, URL encode and URL decode.
   - Base64 handles UTF-8 and accepts the URL-safe alphabet without padding. Binary data gets a clear error instead of garbled text.
   - URL decode treats `+` as a space.
+- **QR Code (`#qr`):** a Text panel and a QR code panel.
+  - Typing makes the QR code as you go: `qrSvg` (UTF-8, error correction M, 4-module quiet zone), always black on white. Download saves a 1024 px PNG. Too much text (over about 2.3 KB) gets the library's "too big" error.
+  - To read a QR code, drop an image on the QR panel, open one with **Open image**, or press Ctrl/⌘+V with an image (and no text) on the clipboard. The image is scaled to at most 1600 px, drawn on white, and read with `jsQR`, which is loaded only then. The text goes into the Text panel. No code found gives a clear error.
+  - The Text box has `data-private` (it may hold Wi-Fi passwords or 2FA secrets), so it is never written to browser storage.
 - **Compare as JSON:** a checkbox in the Compare toolbar.
   - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.
   - The originals go on the undo stack.

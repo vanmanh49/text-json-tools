@@ -15,6 +15,7 @@ const SEND_TO = [ // [label, tab, textarea id]
   ['Compare (left)', 'compare', 'left'],
   ['Compare (right)', 'compare', 'right'],
   ['Encode / Decode', 'encode', 'enc-in'],
+  ['QR Code', 'qr', 'qr-in'],
 ];
 
 function download(text, name) {

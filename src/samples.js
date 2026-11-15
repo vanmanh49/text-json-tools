@@ -18,6 +18,7 @@ export const SAMPLES = {
   'min-in': JSON.stringify(PERSON, null, 2),
   'jwt-in': SAMPLE_JWT,
   'enc-in': 'Xin chào, thế giới! name=Ann Nguyen&tags=dev,ops',
+  'qr-in': 'https://example.com/?name=Ann Nguyễn',
   left: { left: CONFIG_A, right: CONFIG_B },
   right: { left: CONFIG_A, right: CONFIG_B },
 };
