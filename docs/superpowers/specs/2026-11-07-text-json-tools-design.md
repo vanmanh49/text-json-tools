@@ -44,7 +44,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 | `package.json` | `"type": "module"`, dependencies `react`, `react-dom`, `diff@9.0.0`; scripts `dev`, `build`, `preview`, `"test": "vitest run"` |
 | `.github/workflows/deploy.yml` | On push to `main`: tests, build, publish `dist/` to GitHub Pages |
 
-The active tab comes from the URL hash: `#format`, `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#jwt`, `#encode`, `#qr`.
+The active tab comes from the URL hash: `#format`, `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#jwt`, `#encode`, `#qr`, `#uuid`.
 An empty or unknown hash shows `#format`.
 
 ## Functions (`tools.js`)
@@ -109,12 +109,18 @@ Empty input to the three JSON tools returns `''` without an error.
   - Typing makes the QR code as you go: `qrSvg` (UTF-8, error correction M, 4-module quiet zone), always black on white. Download saves a 1024 px PNG. Too much text (over about 2.3 KB) gets the library's "too big" error.
   - To read a QR code, drop an image on the QR panel, open one with **Open image**, or press Ctrl/⌘+V with an image (and no text) on the clipboard. The image is scaled to at most 1600 px, drawn on white, and read with `jsQR`, which is loaded only then. The text goes into the Text panel. No code found gives a clear error.
   - The Text box has `data-private` (it may hold Wi-Fi passwords or 2FA secrets), so it is never written to browser storage.
+- **UUID (`#uuid`):** a Version picker, a Count box (1–1000) and **Generate** above one read-only UUIDs panel.
+  - `uuids(count, version)` makes RFC 9562 UUIDs, one per line, from `crypto.getRandomValues` (`crypto.randomUUID` is missing on plain-http pages). A new version, a new count or Generate makes a new set; a bad count gets a clear error.
+  - v4: random. v7: 48-bit Unix ms then random; a batch is sorted so it ascends. v1 and v6: 100 ns ticks since 1582-10-15, one tick apart within a batch, a random clock sequence and a random node with the multicast bit set (never the MAC address). v6 is v1 with the time fields reordered so it sorts.
+  - v3 and v5 (name-based) are not offered: they need a namespace and name input and MD5 / SHA-1.
+  - Nothing is saved; the list is new on every load.
 - **Compare as JSON:** a checkbox in the Compare toolbar.
   - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.
   - The originals go on the undo stack.
   - An invalid side is named, with its line and column.
 - **Shell:**
   - A top bar holds the `{ }` brand, the tool tabs as a segmented control, a theme switch (System → Light → Dark, remembered) and a ⚙ menu.
+  - The tabs need about 1340 px. From 1151 to 1400 px the brand name and the theme button's text are hidden so they still fit. At 1150 px and below (tablets) the tabs give way to a tool picker: a button showing the current tool's name that opens a list of every tool, with the current one highlighted; the brand name is back, and panel header buttons show icons only so two panels fit side by side. On phones (700 px and below) the brand name is hidden again and the picker fills the row. Picking a tool, a click outside or Escape closes it (Escape also for the ⚙ menu).
   - The menu has "Remember my text in this browser" (on by default) and "Clear all panels", which needs a second click to confirm.
   - Format and the three JSON tools fill the screen (`body.app`), and their panels scroll inside. Compare scrolls the page.
   - Under 700px the panels stack and the tabs scroll sideways.

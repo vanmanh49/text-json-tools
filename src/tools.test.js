@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS } from './tools.js';
 import jsQR from 'jsqr';
 
 test('textToJson unescapes a quoted string', () => {
@@ -334,4 +334,43 @@ test('qrSvg returns empty for blank text and throws when too long', () => {
   assert.equal(qrSvg(''), '');
   assert.equal(qrSvg('  \n'), '');
   assert.throws(() => qrSvg('x'.repeat(5000)), /too big/);
+});
+
+test('uuids makes distinct v4 UUIDs, one per line', () => {
+  const ids = uuids(50).split('\n');
+  assert.equal(ids.length, 50);
+  assert.equal(new Set(ids).size, 50);
+  for (const id of ids) assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+test('uuids rejects a bad count', () => {
+  for (const n of [0, 1001, 1.5, NaN]) assert.throws(() => uuids(n), /1 to 1000/);
+});
+
+const uuidRe = v => new RegExp(`^[0-9a-f]{8}-[0-9a-f]{4}-${v}[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`);
+const NOW = Date.UTC(2026, 10, 17, 12, 0, 0, 123);
+const ticks = BigInt(NOW) * 10000n + 122192928000000000n;
+test('uuids sets the version and variant for every supported version', () => {
+  for (const v of UUID_VERSIONS) {
+    const ids = uuids(20, v).split('\n');
+    assert.equal(new Set(ids).size, 20);
+    for (const id of ids) assert.match(id, uuidRe(v));
+  }
+});
+test('uuids v7 holds the Unix ms and a batch ascends', () => {
+  const ids = uuids(100, 7, NOW).split('\n');
+  for (const id of ids) assert.equal(parseInt(id.replace('-', '').slice(0, 12), 16), NOW);
+  assert.deepEqual(ids, [...ids].sort());
+});
+test('uuids v1 and v6 hold the 100 ns timestamp since 1582', () => {
+  const [a1, b1] = uuids(2, 1, NOW).split('\n').map(h => h.split('-'));
+  assert.equal(BigInt('0x' + a1[2].slice(1) + a1[1] + a1[0]), ticks);
+  assert.equal(BigInt('0x' + b1[2].slice(1) + b1[1] + b1[0]), ticks + 1n);
+  const ids6 = uuids(50, 6, NOW).split('\n');
+  const p = ids6[0].split('-');
+  assert.equal(BigInt('0x' + p[0] + p[1] + p[2].slice(1)), ticks);
+  assert.deepEqual(ids6, [...ids6].sort());
+  for (const id of [...ids6, a1.join('-')]) assert.equal(parseInt(id.split('-')[4].slice(0, 2), 16) & 1, 1); // multicast bit
+});
+test('uuids rejects an unsupported version', () => {
+  for (const v of [2, 3, 5, 8]) assert.throws(() => uuids(1, v), /not supported/);
 });

@@ -16,7 +16,7 @@ test('unknown hash shows format', () => {
   location.hash = '#nope';
   const { container } = render(<App />);
   expect(container.querySelector('section[data-tab="format"]').hidden).toBe(false);
-  expect(hiddenTabs(container)).toHaveLength(7);
+  expect(hiddenTabs(container)).toHaveLength(8);
 });
 
 test('hashchange switches tab and sets aria-current', () => {
@@ -55,4 +55,23 @@ test('opening a tool focuses its input', () => {
   location.hash = '#minify';
   render(<App />);
   expect(document.activeElement.id).toBe('min-in');
+});
+
+test('tool picker closes on pick, outside click and Escape', () => {
+  location.hash = '#format';
+  const { container } = render(<App />);
+  const picker = container.querySelector('.tools-menu');
+  expect(picker.querySelector('summary').textContent).toBe('JSON Format');
+  picker.open = true;
+  fireEvent.click(picker.querySelector('a[href="#uuid"]'));
+  expect(picker.open).toBe(false);
+  picker.open = true;
+  fireEvent.pointerDown(container.querySelector('main'));
+  expect(picker.open).toBe(false);
+  picker.open = true;
+  fireEvent.pointerDown(picker.querySelector('summary'));
+  expect(picker.open).toBe(true); // a click inside leaves it to the summary's own toggle
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(picker.open).toBe(false);
+  expect(document.activeElement).toBe(picker.querySelector('summary'));
 });
