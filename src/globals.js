@@ -1,4 +1,4 @@
-import { setText } from './setText.js';
+import { setText, undoDirect } from './setText.js';
 
 // Page-wide listeners, added once before the first render.
 export function installGlobalListeners() {
@@ -21,6 +21,14 @@ export function installGlobalListeners() {
   // undo a panel's edits (wiping a paste) once its own typing is undone. Undo only the focused box.
   document.addEventListener('beforeinput', e => {
     if (e.inputType.startsWith('history') && e.target !== document.activeElement) e.preventDefault();
+  });
+  // A big paste (and any text setText sets directly) is not in the browser's undo history, which also fires no
+  // 'beforeinput' when that history is empty, so the keys are caught here: Ctrl/⌘+Z undo, Shift+Ctrl/⌘+Z or Ctrl+Y redo.
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName !== 'TEXTAREA' || !(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k !== 'z' && !(k === 'y' && e.ctrlKey)) return;
+    if (undoDirect(e.target.id, e.shiftKey || k === 'y')) e.preventDefault();
   });
   // Ctrl/⌘+V outside a text box pastes into the open tool's input (Compare: the first empty side).
   // shortcut: Safari may not fire 'paste' when nothing editable is focused; the inputs get focus on tab open anyway.

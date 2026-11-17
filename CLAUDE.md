@@ -28,7 +28,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - `store.js`: the try/catch `store` helper around `localStorage`, `settings()`, `MAX_SAVE`.
   - `textStore.js`: the text of every editable panel, by textarea id (`EDITABLE_IDS`), with `useText(id)`, debounced saving and the "too large / not saved" notes.
   - `setText.js`: replaces a textarea's text so Cmd/Ctrl+Z can undo it.
-  - `globals.js`: page-wide listeners (drop guard, Ctrl/⌘+F, `beforeinput` undo guard, paste).
+  - `globals.js`: page-wide listeners (drop guard, Ctrl/⌘+F, `beforeinput` undo guard, undo/redo of directly set text, paste).
   - `samples.js`: "Try a sample" text per textarea id.
   - `ui/IconButton.jsx`: `IconButton` and the static `ICONS` map; `flash()` for "Copied".
   - `ui/Panel.jsx`: one panel: header buttons (Copy, Paste, Clear, Download, Send to), `.editor` with the textarea (or the Pretty view as `children`), empty state, file drop, `StatusBar`. Exports `fileDrop(onFile)`, the drag-and-drop handlers also used by the QR image area.
@@ -43,6 +43,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - Editable textareas are controlled: their value is `useText(id)` and `onChange` calls `textStore.set`.
   - Never `t.value = …` plus a synthetic input event: React ignores it, so go through `textStore.set`.
   - Paste, Clear, samples, drop and Fix JSON call `setText(id, text)`. It uses `execCommand` so the browser's undo still works, then makes sure the store has the text. It uses `execCommand` only when the textarea really has focus; otherwise the command would edit whichever box is focused. It also skips `insertText` for text with more than 200 newlines, because its cost grows roughly quadratically with line count (minutes for 20,000 lines). `delete` and undo stay linear.
+  - Setting the value directly wipes the box's browser undo history (Chrome), and with an empty history Cmd/Ctrl+Z fires no `beforeinput`. So whenever `setText` falls back to the store it records `{ before, after }` (last 20 per id), and a keydown listener in `globals.js` calls `undoDirect(id, redo)` for Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z and Ctrl+Y. It acts only while the box still shows `after` (or `before` for redo), so typed edits go through the browser's undo first.
   - Send to writes the target id with `textStore.set` and switches the hash.
 - **Tools render their own `<section data-tab="...">` and toolbar.** `App.jsx` passes `hidden`. `SearchBox` goes at the end of the toolbar and gets `sectionRef`, `hidden` and a `version` that changes when the tool's output changes.
   - Adding a one-in, one-out tool: a `TransformTool` wrapper with its ids and function, an entry in `NAV` (`src/useHashTab.js`) and in `TOOLS` (`App.jsx`), the input id in `EDITABLE_IDS`, and a sample.
