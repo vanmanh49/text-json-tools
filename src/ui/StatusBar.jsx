@@ -13,7 +13,9 @@ export const tidy = msg => msg
   .replace(/^./, c => c.toUpperCase());
 
 function compute(text, isJson, editable) {
-  const st = isJson ? jsonStatus(text) : { empty: !text, lines: text ? text.split('\n').length : 0, bytes: new TextEncoder().encode(text).length };
+  // Read-only JSON panels show the tool's own JSON.stringify output, which is always valid: skip parsing it again.
+  const st = isJson && editable ? jsonStatus(text)
+    : { empty: !text, ok: isJson, lines: text ? text.split('\n').length : 0, bytes: new TextEncoder().encode(text).length };
   let fixed = '';
   // Small text: offer Fix only when the repair works. Big text: always offer it and try on click.
   if (isJson && !st.empty && !st.ok && editable && text.length <= MAX_TRY_FIX) try { fixed = repairJson(text); } catch { /* not repairable: no button */ }

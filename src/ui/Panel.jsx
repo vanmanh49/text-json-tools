@@ -18,6 +18,23 @@ const SEND_TO = [ // [label, tab, textarea id]
   ['QR Code', 'qr', 'qr-in'],
 ];
 
+// Drop target for files: highlights while a file is dragged over it and passes the first dropped file on.
+export const fileDrop = onFile => ({
+  onDragOver: e => {
+    if (![...e.dataTransfer.types].includes('Files')) return;
+    e.preventDefault();
+    e.currentTarget.classList.add('dropping');
+  },
+  onDragLeave: e => { if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.classList.remove('dropping'); },
+  onDrop: e => {
+    e.currentTarget.classList.remove('dropping');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    e.preventDefault();
+    onFile(file);
+  },
+});
+
 function download(text, name) {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
   const a = Object.assign(document.createElement('a'), { href: url, download: name });
@@ -59,23 +76,11 @@ export default function Panel({ id, label, labelId, ext, tab, readOnly, value, c
     location.hash = '#' + target;
   };
 
-  const drop = {
-    onDragOver: e => {
-      if (![...e.dataTransfer.types].includes('Files')) return;
-      e.preventDefault();
-      e.currentTarget.classList.add('dropping');
-    },
-    onDragLeave: e => { if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.classList.remove('dropping'); },
-    onDrop: async e => {
-      const file = e.dataTransfer.files[0];
-      e.currentTarget.classList.remove('dropping');
-      if (!file) return;
-      e.preventDefault();
-      if (file.size > MAX_DROP) { onErr?.(`${file.name} is ${formatSize(file.size)}. Files up to ${formatSize(MAX_DROP)} can be opened here.`); return; }
-      try { setText(id, await file.text()); onErr?.(''); }
-      catch { onErr?.(`${file.name} could not be read as text.`); }
-    },
-  };
+  const drop = fileDrop(async file => {
+    if (file.size > MAX_DROP) { onErr?.(`${file.name} is ${formatSize(file.size)}. Files up to ${formatSize(MAX_DROP)} can be opened here.`); return; }
+    try { setText(id, await file.text()); onErr?.(''); }
+    catch { onErr?.(`${file.name} could not be read as text.`); }
+  });
 
   const empty = !text;
   return (

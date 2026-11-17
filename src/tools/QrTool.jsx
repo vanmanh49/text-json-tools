@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import Panel from '../ui/Panel.jsx';
+import Panel, { fileDrop } from '../ui/Panel.jsx';
 import { IconButton } from '../ui/IconButton.jsx';
 import { useText } from '../textStore.js';
 import { setText } from '../setText.js';
@@ -61,21 +61,7 @@ export default function QrTool({ hidden }) {
     } catch (e) { setPanelErr(e.message); }
   };
 
-  const drop = {
-    onDragOver: e => {
-      if (![...e.dataTransfer.types].includes('Files')) return;
-      e.preventDefault();
-      e.currentTarget.classList.add('dropping');
-    },
-    onDragLeave: e => { if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.classList.remove('dropping'); },
-    onDrop: e => {
-      e.currentTarget.classList.remove('dropping');
-      const f = e.dataTransfer.files[0];
-      if (!f) return;
-      e.preventDefault();
-      read(f);
-    },
-  };
+  const drop = fileDrop(read);
 
   const { svg } = result;
   return (

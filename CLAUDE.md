@@ -31,7 +31,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - `globals.js`: page-wide listeners (drop guard, Ctrl/⌘+F, `beforeinput` undo guard, paste).
   - `samples.js`: "Try a sample" text per textarea id.
   - `ui/IconButton.jsx`: `IconButton` and the static `ICONS` map; `flash()` for "Copied".
-  - `ui/Panel.jsx`: one panel: header buttons (Copy, Paste, Clear, Download, Send to), `.editor` with the textarea (or the Pretty view as `children`), empty state, file drop, `StatusBar`.
+  - `ui/Panel.jsx`: one panel: header buttons (Copy, Paste, Clear, Download, Send to), `.editor` with the textarea (or the Pretty view as `children`), empty state, file drop, `StatusBar`. Exports `fileDrop(onFile)`, the drag-and-drop handlers also used by the QR image area.
   - `ui/StatusBar.jsx`: lines, size, JSON validity, Go to error, Fix JSON.
   - `ui/SearchBox.jsx`: the search box and its toggles.
   - `tools/TransformTool.jsx`: Text → JSON, JSON → Text, Minify, JWT and Encode/Decode, all one input panel → function → output panel.
@@ -49,7 +49,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - Panels whose input is JSON show parse errors in the status bar, so the tool's `.err` line stays empty for them.
   - Every tool call is wrapped in try/catch, and the message goes to the `.err` line.
   - Disabled states are computed in render from the text; nothing has to refresh them.
-- **Status bar:** the text it checks is debounced inside `StatusBar`, so typing in one panel never re-checks another; keep it that way, or a big broken JSON on one tab stalls typing on all of them. Fix JSON tries `repairJson` up front only for text up to 1 MB (`MAX_TRY_FIX`); above that it runs on click.
+- **Status bar:** read-only JSON panels hold the tool's own `JSON.stringify` output, so they show ✓ without parsing it again. The text it checks is debounced inside `StatusBar`, so typing in one panel never re-checks another; keep it that way, or a big broken JSON on one tab stalls typing on all of them. Fix JSON tries `repairJson` up front only for text up to 1 MB (`MAX_TRY_FIX`); above that it runs on click.
 - **Search** (`SearchBox.jsx`):
   - The Aa / ab / .* toggles (`SEARCH_OPTIONS`) are passed straight to `findAll` as `{ matchCase, wholeWord, regex }`.
   - Matches are CSS Custom Highlight API ranges (`find`, `find-current`), painted on the Compare diff's `.txt` spans, the Pretty view's token spans and, for textareas, on a transparent copy of the text (`.hl`) placed before the textarea. CSS makes the textarea transparent while its `.hl` is not empty.
@@ -62,7 +62,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - Don't toggle classes by hand on nodes whose `className` React renders from state (`.node`, `.change`, `.inputs`); the next render overwrites them. The only hand-toggled classes are `.dropping` on `.editor` and `.flashing` on a button, whose `className` never changes.
   - No `innerHTML` / `dangerouslySetInnerHTML`. User text is only ever a JSX text child or a DOM text node.
   - Every element id and class name matches the pre-React app; CSS and tests depend on them.
-- **Storage:** `tjt:settings` (`{ remember }`), `tjt:theme`, `tjt:text:<textarea id>`. Every access goes through `store`. An inline script in `index.html`'s `<head>` applies the theme before first paint. Ids in `PRIVATE_IDS` (the JWT token box, rendered with `data-private`) are never written to storage, whatever the "remember" setting says. Add any box that may hold secrets there.
+- **Storage:** `tjt:settings` (`{ remember }`), `tjt:theme`, `tjt:text:<textarea id>`. Every access goes through `store`. An inline script in `index.html`'s `<head>` applies the theme before first paint. Ids in `PRIVATE_IDS` (the JWT, QR and Encode/Decode input boxes, rendered with `data-private`) are never written to storage, whatever the "remember" setting says, and any text an older version saved for them is deleted on load. Add any box that may hold secrets there.
 - **Tests** (Vitest + jsdom + Testing Library, next to the code as `*.test.js(x)`):
   - jsdom has no `ResizeObserver` and no `scrollIntoView`. Tests that render Compare, search, or the whole `App` stub them: `vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })` and `Element.prototype.scrollIntoView = () => {}` (restore both in `afterEach`).
   - Reset the store in `afterEach` (`textStore.set(id, '')`), because it is module state shared by the tests in a file.
@@ -86,6 +86,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - After a copy, `compare(index)` re-renders and moves focus back to the same difference.
 - Long diffs:
   - Unchanged runs collapse with `splitSame` into a hidden `.hidden-lines` box behind an "⋯ N unchanged lines" `.expand` button (`expanded` Set state). Line-number counters still advance through hidden rows.
+  - A folded `.hidden-lines` holds its lines as one text node joined by `\n`; its rows are built only on expand (a 50,000-line file otherwise built ~300,000 hidden elements, about 2 s per compare, copy or undo). The search reads that node line by line, each line twice (left, then right), which is the order and count the rows have once expanded, so a match's index survives the expand. Keep the two in step.
   - `updateLocbar()` places the ticks from each `.change` element's `offsetTop / diff.offsetHeight`, so it must re-run whenever the diff's layout changes. It does after render, after an expand, through the ResizeObserver, and on resize, and it skips `setTicks` when nothing moved. `.diff` is `position: relative` so that `offsetTop` is measured from the diff.
   - The keyboard shortcuts check `document.activeElement` (not `e.target`) so they don't fire while typing; on macOS, Option+arrows move by word in a textarea.
 - `diffArrays` runs with `{ timeout: 1000 }`. When it gives up it returns `undefined`, and `diffBlocks` throws a "too different" error instead of freezing the tab.
