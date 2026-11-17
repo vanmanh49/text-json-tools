@@ -8,7 +8,7 @@ A static website with nine text and JSON utilities. Everything runs in the brows
 | **Compare & Merge** | A WinMerge-style side-by-side diff. Copy one changed line (→ ←) or a whole block (Block ⇒ / ⇐ Block) to the other side. **Compare as JSON** ignores key order and formatting. It also has Prev/Next diff, Undo, a sticky toolbar, collapsed unchanged lines, a clickable location bar and keyboard shortcuts (Alt+↓/↑ next/previous, Alt+→/← copy, Ctrl/⌘+Z undo). | |
 | **Text → JSON** | Unescapes a JSON string literal into pretty JSON. It also accepts escaped JSON copied from a log without its outer quotes. | `"{\"name\":\"Ann\"}"` → `{ "name": "Ann" }` |
 | **JWT Decode** | Shows a token's header and payload, and when it was issued and when it expires. Decoded in your browser and never saved; the signature is not checked. | `eyJhbGciOi…` → header, payload, "Expires in 59 minutes" |
-| **Encode / Decode** | Base64 encode and decode (UTF-8, URL-safe), and URL encode and decode. | `Xin chào` ⇄ `WGluIGNow6Bv` |
+| **Encode / Decode** | Base64 encode and decode (UTF-8, URL-safe), and URL encode and decode. The input is never saved, since decoded text is often a password or key. | `Xin chào` ⇄ `WGluIGNow6Bv` |
 | **QR Code** | Turns text or a link into a QR code (download as PNG), and reads the text back from a QR code image you drop, paste or open. The text is never saved. | `https://example.com` ⇄ QR image |
 | **UUID** | Generates 1 to 1000 UUIDs, one per line: v4 (random), v7 (time-ordered), v1 or v6 (time-based, with a random node). **Generate** makes a new set. | → `3f2b…-4…` |
 | **JSON → Text** | Escapes JSON into a single string literal. | `{ "name": "Ann" }` → `"{\"name\":\"Ann\"}"` |

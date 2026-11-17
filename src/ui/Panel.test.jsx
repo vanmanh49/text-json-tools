@@ -37,6 +37,13 @@ test('valid JSON shows ✓ Valid JSON with line count', () => {
   expect(container.querySelector('.empty').hidden).toBe(true);
 });
 
+test('a read-only JSON panel shows ✓ Valid JSON without parsing its own output again', () => {
+  const { container } = render(<Panel id="min-out" label="One-line JSON" ext="json" tab="minify" readOnly value={'{"a":1}'} />);
+  settle(60);
+  expect(container.querySelector('.status').textContent).toContain('✓ Valid JSON');
+  expect(jsonStatus).not.toHaveBeenCalled();
+});
+
 test('broken but fixable JSON offers Fix JSON, and clicking it repairs', () => {
   render(<Panel id="fmt-in" label="JSON" ext="json" tab="format" />);
   act(() => textStore.set('fmt-in', '{a:1,}'));

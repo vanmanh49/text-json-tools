@@ -34,13 +34,15 @@ const sameRows = (lines, nl, nr) => lines.map((line, i) => <Row key={nl + i} cls
 
 // Long unchanged runs collapse to 3 lines of context, with a button that expands them.
 // The button stays right before .hidden-lines: the search clicks it to open a match inside.
+// Folded, .hidden-lines holds the run as one text node (lines joined by \n), so a 50,000-line file
+// doesn't build 300,000 hidden elements; the search reads that node line by line.
 const Same = memo(function Same({ part: { head, hidden, tail, nl, nr, bi }, open, onExpand }) {
   const n = hidden.length;
   return (
     <>
       {sameRows(head, nl, nr)}
       {n > 0 && !open && <Btn className="expand" label={`Show ${n} unchanged lines`} onClick={() => onExpand(bi)}>{`⋯ ${n} unchanged lines`}</Btn>}
-      {n > 0 && <div className="hidden-lines" hidden={!open}>{sameRows(hidden, nl + head.length, nr + head.length)}</div>}
+      {n > 0 && <div className="hidden-lines" hidden={!open}>{open ? sameRows(hidden, nl + head.length, nr + head.length) : hidden.join('\n')}</div>}
       {sameRows(tail, nl + head.length + n, nr + head.length + n)}
     </>
   );

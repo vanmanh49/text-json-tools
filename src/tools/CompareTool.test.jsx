@@ -95,13 +95,16 @@ test('long unchanged run collapses and the counter skips hidden lines', () => {
   const box = more.nextElementSibling;
   expect(box.className).toBe('hidden-lines');
   expect(box.hidden).toBe(true);
-  expect(box.querySelectorAll('.row')).toHaveLength(17);
+  expect(box.querySelectorAll('.row')).toHaveLength(0); // folded: one text node, rows are built on expand
+  expect(box.textContent.split('\n')).toHaveLength(17);
   expect($('#diff .change .ln').textContent).toBe('21');
   expect($('.inputs').classList.contains('folded')).toBe(true);
   expect($('#fold-summary').textContent).toBe('Left · 21 lines    Right · 21 lines');
   fireEvent.click(more);
   expect($('#diff .expand')).toBeNull();
   expect(box.hidden).toBe(false);
+  expect(box.querySelectorAll('.row')).toHaveLength(17);
+  expect(box.querySelector('.ln').textContent).toBe('1'); // the run starts the file, so no context lines sit above it
   expect($('#diff .change .ln').textContent).toBe('21');
 });
 

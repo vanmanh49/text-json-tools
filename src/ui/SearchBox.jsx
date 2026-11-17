@@ -33,13 +33,24 @@ export default function SearchBox({ sectionRef, version, hidden }) {
   function run() {
     const query = bad ? '' : q; // a regex that doesn't compile finds nothing
     const found = [];
-    const collect = node => {
-      if (!node) return;
-      for (const [a, b] of findAll(node.data, query, MAX_HITS - found.length, opts)) {
+    const collect = (node, from = 0, to = node?.data.length) => {
+      if (!node || found.length >= MAX_HITS) return;
+      for (const [a, b] of findAll(node.data.slice(from, to), query, MAX_HITS - found.length, opts)) {
         const r = new Range();
-        r.setStart(node, a);
-        r.setEnd(node, b);
+        r.setStart(node, from + a);
+        r.setEnd(node, from + b);
         found.push(r);
+      }
+    };
+    // A folded Compare run is one text node; take each line twice (left side, right side), in the order
+    // and count its rows will have once expanded, so a match's index survives the expand.
+    const collectLines = node => {
+      if (!node) return;
+      for (let from = 0; from <= node.data.length && found.length < MAX_HITS;) {
+        const nl = node.data.indexOf('\n', from), to = nl < 0 ? node.data.length : nl;
+        collect(node, from, to);
+        collect(node, from, to);
+        from = to + 1;
       }
     };
     for (const t of sectionRef.current.querySelectorAll('textarea')) {
@@ -53,7 +64,11 @@ export default function SearchBox({ sectionRef, version, hidden }) {
       collect(hl.firstChild);
     }
     // shortcut: a Pretty-view match must sit inside one token (key, value, punctuation), not span tokens.
-    if (query) for (const s of sectionRef.current.querySelectorAll('.diff .txt, .pretty .code > span:not(.summary)')) collect(s.firstChild);
+    if (query) {
+      for (const s of sectionRef.current.querySelectorAll('.diff .txt, .diff .hidden-lines[hidden], .pretty .code > span:not(.summary)')) {
+        if (s.classList.contains('hidden-lines')) collectLines(s.firstChild); else collect(s.firstChild);
+      }
+    }
     hits.current = found;
     at.current = -1;
     paint();
@@ -64,7 +79,8 @@ export default function SearchBox({ sectionRef, version, hidden }) {
     const hs = hits.current;
     if (!hs.length) return;
     at.current = (at.current + step + hs.length) % hs.length;
-    const r = hs[at.current], host = r.startContainer.parentElement, hl = host.closest('.hl');
+    let r = hs[at.current], host = r.startContainer.parentElement;
+    const hl = host.closest('.hl');
     if (hl) {
       const t = hl.nextElementSibling;
       t.scrollTop += r.getBoundingClientRect().top - t.getBoundingClientRect().top - t.clientHeight / 3;
@@ -72,7 +88,14 @@ export default function SearchBox({ sectionRef, version, hidden }) {
     } else {
       // Both click handlers render with flushSync, so the match is shown before it is scrolled to.
       const hidden = host.closest('.hidden-lines');
-      if (hidden?.hidden) hidden.previousElementSibling.click(); // its "⋯ N unchanged lines" button
+      if (hidden?.hidden) {
+        hidden.previousElementSibling.click(); // its "⋯ N unchanged lines" button: the run's text becomes rows
+        const keep = at.current;
+        run(); // the old ranges pointed into the replaced text node; same order and count, so `keep` still fits
+        at.current = keep;
+        r = hits.current[keep];
+        host = r.startContainer.parentElement;
+      }
       for (let n = host.closest('.node.collapsed'); n; n = n.parentElement.closest('.node.collapsed')) n.querySelector('.fold').click(); // Pretty view folds
       host.scrollIntoView({ block: 'center' });
     }

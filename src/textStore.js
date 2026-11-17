@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { store, settings, MAX_SAVE } from './store.js';
 
-export const PRIVATE_IDS = new Set(['jwt-in', 'qr-in']);
+export const PRIVATE_IDS = new Set(['jwt-in', 'qr-in', 'enc-in']); // tokens, Wi-Fi passwords, decoded Basic auth
 export const EDITABLE_IDS = ['fmt-in', 't2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'qr-in', 'left', 'right'];
 const PERSISTED = EDITABLE_IDS.filter(id => !PRIVATE_IDS.has(id));
 const key = id => 'tjt:text:' + id;
@@ -11,6 +11,9 @@ const subs = new Set();
 let remember = settings().remember;
 
 const notify = () => subs.forEach(fn => fn());
+
+// A box made private later may still have text saved by an older version: remove it.
+for (const id of PRIVATE_IDS) store.del(key(id));
 
 if (remember) {
   for (const id of PERSISTED) {

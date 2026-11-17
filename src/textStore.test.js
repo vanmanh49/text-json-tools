@@ -15,11 +15,18 @@ describe('textStore', () => {
     expect(textStore.get('nope')).toBe('');
   });
 
-  it('never persists jwt-in', async () => {
+  it('never persists jwt-in, qr-in or enc-in', async () => {
     const { textStore } = await load();
-    textStore.set('jwt-in', 'tok');
+    for (const id of ['jwt-in', 'qr-in', 'enc-in']) textStore.set(id, 'secret');
     vi.advanceTimersByTime(400);
-    expect(localStorage.getItem('tjt:text:jwt-in')).toBeNull();
+    for (const id of ['jwt-in', 'qr-in', 'enc-in']) expect(localStorage.getItem('tjt:text:' + id)).toBeNull();
+  });
+
+  it('removes text an older version saved for a now-private box', async () => {
+    localStorage.setItem('tjt:text:enc-in', 'admin:hunter2');
+    const { textStore } = await load();
+    expect(localStorage.getItem('tjt:text:enc-in')).toBeNull();
+    expect(textStore.get('enc-in')).toBe('');
   });
 
   it('saves after the debounce and deletes on empty', async () => {

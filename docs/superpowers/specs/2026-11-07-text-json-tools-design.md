@@ -105,6 +105,7 @@ Empty input to the three JSON tools returns `''` without an error.
 - **Encode / Decode (`#encode`):** a mode picker for Base64 encode, Base64 decode, URL encode and URL decode.
   - Base64 handles UTF-8 and accepts the URL-safe alphabet without padding. Binary data gets a clear error instead of garbled text.
   - URL decode treats `+` as a space.
+  - The input box has `data-private` (decoded Basic auth headers and keys are common), so it is never written to browser storage; text saved there by an older version is deleted on load.
 - **QR Code (`#qr`):** a Text panel and a QR code panel.
   - Typing makes the QR code as you go: `qrSvg` (UTF-8, error correction M, 4-module quiet zone), always black on white. Download saves a 1024 px PNG. Too much text (over about 2.3 KB) gets the library's "too big" error.
   - To read a QR code, drop an image on the QR panel, open one with **Open image**, or press Ctrl/⌘+V with an image (and no text) on the clipboard. The image is scaled to at most 1600 px, drawn on white, and read with `jsQR`, which is loaded only then. The text goes into the Text panel. No code found gives a clear error.
@@ -205,7 +206,10 @@ Empty input to the three JSON tools returns `''` without an error.
       to a difference.
     - Unchanged runs collapse to 3 lines of context next to each change
       (`splitSame`). Each collapsed run shows as a "⋯ N unchanged lines" row
-      that expands it. Line numbers stay true.
+      that expands it. Line numbers stay true. A folded run's rows are only
+      built when it is expanded (until then it is one hidden block of text the
+      search can still find matches in), so files of tens of thousands of lines
+      stay quick to compare, copy and undo.
     - A sticky location bar sits to the right of the diff, scaled to the diff's
       height. It has one tick per difference (the current one in the accent
       colour) and a box showing the part of the diff that is on screen. Clicking
