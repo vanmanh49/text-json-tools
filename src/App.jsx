@@ -7,8 +7,9 @@ import { TextToJson, JsonToText, Minify, Jwt, Encode } from './tools/TransformTo
 import FormatTool from './tools/FormatTool.jsx';
 import CompareTool from './tools/CompareTool.jsx';
 import QrTool from './tools/QrTool.jsx';
+import UuidTool from './tools/UuidTool.jsx';
 
-const TOOLS = { format: FormatTool, compare: CompareTool, 'text-to-json': TextToJson, 'json-to-text': JsonToText, minify: Minify, jwt: Jwt, encode: Encode, qr: QrTool };
+const TOOLS = { format: FormatTool, compare: CompareTool, 'text-to-json': TextToJson, 'json-to-text': JsonToText, minify: Minify, jwt: Jwt, encode: Encode, qr: QrTool, uuid: UuidTool };
 
 // Theme: System → Light → Dark. The initial value is applied by an inline script in <head>.
 const THEMES = ['system', 'light', 'dark'];
@@ -20,6 +21,7 @@ export default function App() {
   const [showTop, setShowTop] = useState(false);
   const [remember] = useState(() => settings().remember);
   const menu = useRef(null);
+  const toolsMenu = useRef(null);
 
   useEffect(() => {
     if (theme === 'system') delete document.documentElement.dataset.theme;
@@ -45,6 +47,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Open menus close on a click outside them or on Escape, like native menus.
+    const close = e => document.querySelectorAll('details.menu[open]').forEach(d => {
+      if (e.type === 'keydown' ? e.key !== 'Escape' : d.contains(e.target)) return;
+      d.open = false;
+      if (e.type === 'keydown') d.querySelector('summary').focus();
+    });
+    addEventListener('pointerdown', close);
+    addEventListener('keydown', close);
+    return () => { removeEventListener('pointerdown', close); removeEventListener('keydown', close); };
+  }, []);
+
+  useEffect(() => {
     if (!confirming) return;
     const t = setTimeout(() => setConfirming(false), 3000);
     return () => clearTimeout(t);
@@ -63,17 +77,25 @@ export default function App() {
     menu.current.open = false;
   };
   const themeName = theme[0].toUpperCase() + theme.slice(1);
+  const toolName = NAV.find(([t]) => t === tab)[1];
 
   return (
     <>
         <header className="topbar">
-          <a className="brand" href="#format" title="Runs entirely in your browser. Nothing is uploaded.">
+          <a className="brand" href="#format" aria-label="Text & JSON Tools" title="Runs entirely in your browser. Nothing is uploaded.">
             <span className="mark" aria-hidden="true">{'{ }'}</span>
             <span className="brand-name">Text &amp; JSON Tools</span>
           </a>
           <nav aria-label="Tools">
           {NAV.map(([t, name]) => <a key={t} href={'#' + t} aria-current={tab === t ? 'page' : undefined}>{name}</a>)}
         </nav>
+          {/* Narrow screens: the tab strip above is hidden and this picker takes its place. */}
+          <details className="menu tools-menu" ref={toolsMenu}>
+            <summary aria-label={`Tool: ${toolName}. Choose a tool`}>{toolName}</summary>
+            <div className="menu-body tool-list">
+              {NAV.map(([t, name]) => <a key={t} href={'#' + t} aria-current={tab === t ? 'page' : undefined} onClick={() => { toolsMenu.current.open = false; }}>{name}</a>)}
+            </div>
+          </details>
           <div className="top-actions">
             <IconButton id="theme" icon="theme" label={`Theme: ${themeName}`} title={`Theme: ${themeName} (click to change)`} onClick={cycleTheme} />
             <details className="menu" ref={menu}>

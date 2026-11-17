@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 // [tab, menu label]: the one list of tools. App maps each tab to its component.
 export const NAV = [
   ['format', 'JSON Format'], ['compare', 'Compare & Merge'], ['text-to-json', 'Text → JSON'],
-  ['json-to-text', 'JSON → Text'], ['minify', 'JSON Minify'], ['jwt', 'JWT Decode'], ['encode', 'Encode / Decode'], ['qr', 'QR Code'],
+  ['json-to-text', 'JSON → Text'], ['minify', 'JSON Minify'], ['jwt', 'JWT Decode'], ['encode', 'Encode / Decode'], ['qr', 'QR Code'], ['uuid', 'UUID'],
 ];
 const TABS = NAV.map(([t]) => t);
 

@@ -1,6 +1,6 @@
 # Text & JSON Tools
 
-A static website with eight text and JSON utilities. Everything runs in the browser and nothing is uploaded.
+A static website with nine text and JSON utilities. Everything runs in the browser and nothing is uploaded.
 
 | Tool | What it does | Example |
 |------|--------------|---------|
@@ -10,12 +10,13 @@ A static website with eight text and JSON utilities. Everything runs in the brow
 | **JWT Decode** | Shows a token's header and payload, and when it was issued and when it expires. Decoded in your browser and never saved; the signature is not checked. | `eyJhbGciOi…` → header, payload, "Expires in 59 minutes" |
 | **Encode / Decode** | Base64 encode and decode (UTF-8, URL-safe), and URL encode and decode. | `Xin chào` ⇄ `WGluIGNow6Bv` |
 | **QR Code** | Turns text or a link into a QR code (download as PNG), and reads the text back from a QR code image you drop, paste or open. The text is never saved. | `https://example.com` ⇄ QR image |
+| **UUID** | Generates 1 to 1000 UUIDs, one per line: v4 (random), v7 (time-ordered), v1 or v6 (time-based, with a random node). **Generate** makes a new set. | → `3f2b…-4…` |
 | **JSON → Text** | Escapes JSON into a single string literal. | `{ "name": "Ann" }` → `"{\"name\":\"Ann\"}"` |
 | **JSON Minify** | Minifies formatted JSON onto one line. | multi-line JSON → `{"a":[1,2]}` |
 
 Every tool has a search box: Ctrl/⌘+F jumps to it, and Enter / Shift+Enter go to the next / previous match. Its toggles turn on **Aa** match case, **ab** whole word and **.\*** regular expressions. Opening a tool puts the cursor in its input, and Ctrl/⌘+V pressed anywhere else on the page pastes into that input.
 
-Each tool has its own link: `#format` (the default), `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#jwt`, `#encode`, `#qr`.
+Each tool has its own link: `#format` (the default), `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#jwt`, `#encode`, `#qr`, `#uuid`.
 
 The app works like a small editor:
 - The panels fill the screen.

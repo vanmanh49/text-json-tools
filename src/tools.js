@@ -327,3 +327,29 @@ export function qrSvg(s) {
   const n = size + 8;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges"><rect width="${n}" height="${n}" fill="#fff"/><path d="${d}"/></svg>`;
 }
+
+export const UUID_VERSIONS = [4, 7, 1, 6];
+const GREGORIAN = 122192928000000000n; // 100 ns ticks from 1582-10-15 (the v1/v6 epoch) to 1970-01-01
+
+// `count` UUIDs of `version` (RFC 9562), one per line. getRandomValues, not randomUUID, which is missing on plain-http pages.
+export function uuids(count, version = 4, now = Date.now()) {
+  if (!Number.isInteger(count) || count < 1 || count > 1000) throw new Error('Count must be a whole number from 1 to 1000.');
+  if (!UUID_VERSIONS.includes(version)) throw new Error(`UUID version ${version} is not supported.`);
+  const out = Array.from({ length: count }, (_, i) => {
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    const v = new DataView(b.buffer);
+    if (version === 7) { v.setUint32(0, Math.floor(now / 2 ** 16)); v.setUint16(4, now % 2 ** 16); } // 48-bit Unix ms
+    if (version === 1 || version === 6) {
+      const t = BigInt(now) * 10000n + GREGORIAN + BigInt(i); // one 100 ns tick per UUID keeps a batch unique and ordered
+      if (version === 1) { v.setUint32(0, Number(t & 0xffffffffn)); v.setUint16(4, Number((t >> 32n) & 0xffffn)); v.setUint16(6, Number(t >> 48n)); }
+      else { v.setUint32(0, Number(t >> 28n)); v.setUint16(4, Number((t >> 12n) & 0xffffn)); v.setUint16(6, Number(t & 0xfffn)); }
+      b[10] |= 1; // random node id, so the multicast bit is set (RFC 9562 §6.10)
+    }
+    b[6] = (b[6] & 0x0f) | (version << 4);
+    b[8] = (b[8] & 0x3f) | 0x80; // RFC 9562 variant
+    const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  });
+  // A v7 batch shares one millisecond; sorting makes it ascend like a counter would.
+  return (version === 7 ? out.sort() : out).join('\n');
+}
