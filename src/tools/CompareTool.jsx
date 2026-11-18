@@ -198,6 +198,7 @@ export default function CompareTool({ hidden }) {
     setUndoLen(0);
     setResult(null);
     setCurrent(currentRef.current = -1);
+    setFolded(false); // no diff left to show, so the inputs must not stay hidden (e.g. after Clear all)
   }, [left, right]);
 
   useLayoutEffect(() => { if (pendingFocus) go(pendingFocus.i, false); }, [pendingFocus, go]);

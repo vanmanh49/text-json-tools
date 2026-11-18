@@ -132,3 +132,12 @@ test('compare and swap are disabled when both sides are empty', () => {
   expect([textStore.get('left'), textStore.get('right')]).toEqual(['a', '']);
   expect($('#undo').disabled).toBe(false);
 });
+
+test('clearing the texts after a compare unfolds the inputs', () => {
+  const { $, compare } = setup(CONFIG_A, CONFIG_B);
+  compare();
+  expect($('.inputs').classList.contains('folded')).toBe(true);
+  act(() => textStore.clearAll());
+  expect($('.inputs').classList.contains('folded')).toBe(false);
+  expect($('#diff .change')).toBeNull();
+});
