@@ -462,12 +462,17 @@ export const htmlPreview = s => s.replace(/^\s*(<!doctype[^>]*>)?/i, '$1' + PREV
 export const LINE_OPS = [
   ['sort', 'Sort A → Z'], ['sort-desc', 'Sort Z → A'], ['unique', 'Remove duplicates'], ['reverse', 'Reverse order'],
   ['trim', 'Trim spaces'], ['no-empty', 'Remove empty lines'], ['upper', 'UPPERCASE'], ['lower', 'lowercase'],
+  ['capitalize', 'Capitalize first letter'], ['title', 'Capitalize Each Word'],
 ];
 // natural: item2 before item10. One collator: localeCompare with options builds a new one per call (~14x slower).
 const byText = new Intl.Collator(undefined, { numeric: true }).compare;
 const LINE_FNS = {
   sort: l => l.sort(byText), 'sort-desc': l => l.sort(byText).reverse(), unique: l => [...new Set(l)], reverse: l => l.reverse(),
   trim: l => l.map(x => x.trim()), 'no-empty': l => l.filter(x => x.trim()), upper: l => l.map(x => x.toUpperCase()), lower: l => l.map(x => x.toLowerCase()),
+  // Only the first letter changes, so iPhone and NASA keep their case. A letter right after a digit or an
+  // apostrophe doesn't start a word, so 1st and don't stay as they are.
+  capitalize: l => l.map(x => x.replace(/^(\s*)(\p{L})/u, (_, sp, c) => sp + c.toUpperCase())),
+  title: l => l.map(x => x.replace(/(^|[^\p{L}\p{N}'’])(\p{L})/gu, (_, before, c) => before + c.toUpperCase())),
 };
 
 // Applies one LINE_OPS operation to the lines of `s` (LF or CRLF); one trailing newline is dropped, output uses LF.

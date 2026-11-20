@@ -665,3 +665,9 @@ test('jsonToTs does not cut the s off words ending in -us', () => {
   assert.match(t, /status: StatusItem\[\];/);
   assert.match(t, /bus: BusItem\[\];/);
 });
+test('lineTool capitalizes the first letter of each line', () => {
+  assert.equal(lineTool('hello world\n  đà nẵng\n1st place\n"quoted"\nNASA', 'capitalize'), 'Hello world\n  Đà nẵng\n1st place\n"quoted"\nNASA');
+});
+test('lineTool capitalizes each word, leaving the rest of the word alone', () => {
+  assert.equal(lineTool("hello wORLD\ndon't stop 1st e-mail\nhà nội, việt nam\niPhone", 'title'), "Hello WORLD\nDon't Stop 1st E-Mail\nHà Nội, Việt Nam\nIPhone");
+});
