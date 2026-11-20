@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape } from './tools.js';
 import jsQR from 'jsqr';
 
 test('textToJson unescapes a quoted string', () => {
@@ -412,4 +412,38 @@ test('formatHtml stays fast on tags that never close', () => {
 test('htmlPreview puts the no-network policy after the doctype', () => {
   assert.match(htmlPreview('<!doctype html><p>x'), /^<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none';.*<p>x$/);
   assert.match(htmlPreview('<p>x'), /^<meta http-equiv="Content-Security-Policy"/);
+});
+
+test('encoders map empty input to empty output', () => {
+  for (const f of [hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape]) assert.equal(f(''), '');
+  assert.equal(hexDecode(' \n'), '');
+});
+test('hexEncode gives lowercase UTF-8 hex', () => {
+  assert.equal(hexEncode('Hi é😀'), '486920c3a9f09f9880');
+});
+test('hexDecode ignores separators, 0x prefixes and case', () => {
+  for (const h of ['486920c3a9f09f9880', '48:69 20 C3A9 0xf0 0x9f 0x98 0x80', '48-69-20-c3-a9-f0-9f-98-80', '48,69,20,c3,a9,f0,9f,98,80']) {
+    assert.equal(hexDecode(h), 'Hi é😀');
+  }
+});
+test('hexDecode rejects odd digits, non-hex and non-UTF-8', () => {
+  assert.throws(() => hexDecode('486'), /two digits/);
+  assert.throws(() => hexDecode('zz'), /not valid hex/);
+  assert.throws(() => hexDecode('ff'), /isn't UTF-8/);
+});
+test('htmlEscape escapes the five special characters and htmlUnescape reverses it', () => {
+  const src = `<a href="x">Tom & Jerry's</a>`;
+  const esc = '&lt;a href=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/a&gt;';
+  assert.equal(htmlEscape(src), esc);
+  assert.equal(htmlUnescape(esc), src);
+});
+test('htmlUnescape decodes numbers and common names in one pass, leaving the rest', () => {
+  assert.equal(htmlUnescape('&amp;lt; &#233; &#x1F600; &copy; &bogus; &#x110000;'), '&lt; é 😀 © &bogus; &#x110000;');
+});
+test('unicodeEscape escapes non-ASCII code units and unicodeUnescape reverses it', () => {
+  assert.equal(unicodeEscape('é😀a\n'), '\\u00e9\\ud83d\\ude00a\n');
+  assert.equal(unicodeUnescape('\\u00e9\\ud83d\\ude00a\n'), 'é😀a\n');
+});
+test('unicodeUnescape decodes \\u{…} and leaves malformed escapes', () => {
+  assert.equal(unicodeUnescape('\\u{1F600} \\u12 \\u{110000}'), '😀 \\u12 \\u{110000}');
 });

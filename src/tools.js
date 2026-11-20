@@ -241,10 +241,44 @@ export function base64Decode(s) {
   b += '='.repeat((4 - (b.length % 4)) % 4);
   let bin;
   try { bin = atob(b); } catch { throw new Error('This is not valid Base64.'); }
-  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return utf8(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+
+function utf8(bytes) {
   try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
   catch { throw new Error("The decoded data isn't UTF-8 text (it may be an image or other binary file)."); }
 }
+
+export const hexEncode = s => Array.from(new TextEncoder().encode(s), b => b.toString(16).padStart(2, '0')).join('');
+
+// Accepts whitespace, ':', ',' and '-' between bytes, 0x prefixes and either case.
+export function hexDecode(s) {
+  const h = s.replace(/0x/gi, '').replace(/[\s:,-]+/g, '');
+  if (!/^[0-9a-f]*$/i.test(h)) throw new Error('This is not valid hex.');
+  if (h.length % 2) throw new Error('Hex needs two digits per byte.');
+  return utf8(Uint8Array.from(h.match(/../g) ?? [], b => parseInt(b, 16)));
+}
+
+const HTML_ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+export const htmlEscape = s => s.replace(/[&<>"']/g, c => HTML_ESC[c]);
+
+// shortcut: only common named entities; add a full table if users paste others.
+const ENTITIES = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0', copy: '©', reg: '®', trade: '™', hellip: '…', mdash: '—', ndash: '–',
+  lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', laquo: '«', raquo: '»', euro: '€', pound: '£', yen: '¥', cent: '¢', deg: '°',
+  times: '×', divide: '÷', middot: '·', bull: '•',
+};
+const fromCode = (n, raw) => (n <= 0x10ffff ? String.fromCodePoint(n) : raw);
+
+// One pass, so '&amp;lt;' becomes '&lt;'. Unknown names and out-of-range numbers stay as written.
+export const htmlUnescape = s => s.replace(/&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi, (raw, dec, hex, name) =>
+  dec ? fromCode(parseInt(dec, 10), raw) : hex ? fromCode(parseInt(hex, 16), raw) : Object.hasOwn(ENTITIES, name) ? ENTITIES[name] : raw);
+
+export const unicodeEscape = s => s.replace(/[^\x00-\x7e]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+
+// \uXXXX and \u{X…}; malformed or out-of-range escapes stay as written.
+export const unicodeUnescape = s => s.replace(/\\u(?:([0-9a-f]{4})|\{([0-9a-f]{1,6})\})/gi, (raw, four, braced) =>
+  fromCode(parseInt(four ?? braced, 16), raw));
 
 export const urlEncode = s => encodeURIComponent(s);
 // '+' means a space in query strings; a literal plus is always encoded as %2B, so this is safe.

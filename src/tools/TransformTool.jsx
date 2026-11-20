@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Panel from '../ui/Panel.jsx';
 import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
-import { base64Decode, base64Encode, decodeJwt, jsonToText, jwtTimeNotes, minify, textToJson, urlDecode, urlEncode } from '../tools.js';
+import { base64Decode, base64Encode, decodeJwt, hexDecode, hexEncode, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
 
 // One input panel, one output panel, and the tool's function between them.
 export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
@@ -67,7 +67,10 @@ export function Jwt({ hidden }) {
   );
 }
 
-const ENCODERS = { 'base64-encode': base64Encode, 'base64-decode': base64Decode, 'url-encode': urlEncode, 'url-decode': urlDecode };
+const ENCODERS = {
+  'base64-encode': base64Encode, 'base64-decode': base64Decode, 'url-encode': urlEncode, 'url-decode': urlDecode, 'hex-encode': hexEncode, 'hex-decode': hexDecode,
+  'html-escape': htmlEscape, 'html-unescape': htmlUnescape, 'unicode-escape': unicodeEscape, 'unicode-unescape': unicodeUnescape,
+};
 
 export function Encode({ hidden }) {
   const [mode, setMode] = useState('base64-encode');
@@ -79,11 +82,17 @@ export function Encode({ hidden }) {
         <option value="base64-decode">Base64 decode</option>
         <option value="url-encode">URL encode</option>
         <option value="url-decode">URL decode</option>
+        <option value="hex-encode">Hex encode</option>
+        <option value="hex-decode">Hex decode</option>
+        <option value="html-escape">HTML escape</option>
+        <option value="html-unescape">HTML unescape</option>
+        <option value="unicode-escape">Unicode escape</option>
+        <option value="unicode-unescape">Unicode unescape</option>
       </select>
     </label>
   );
   return (
-    <TransformTool tab="encode" hidden={hidden} desc="Encode or decode Base64 and URL text. Characters from any language are handled as UTF-8."
+    <TransformTool tab="encode" hidden={hidden} desc="Encode or decode Base64, URL, hex, HTML entities and Unicode escapes. Characters from any language are handled as UTF-8."
       inId="enc-in" inLabel="Input" inExt="txt" outId="enc-out" outLabel="Output" outExt="txt" fn={fn} toolbar={toolbar} />
   );
 }

@@ -104,7 +104,10 @@ Empty input to the three JSON tools returns `''` without an error.
   - The `iat`, `nbf` and `exp` claims are listed in plain English ("Expires in 2 hours (… UTC)"), and expired ones are shown in red.
   - Encrypted tokens (JWE, with 5 parts) and malformed tokens get a clear error.
   - The signature is never checked, and the page says so. The token textarea has `data-private`, so it is never written to browser storage.
-- **Encode / Decode (`#encode`):** a mode picker for Base64 encode, Base64 decode, URL encode and URL decode.
+- **Encode / Decode (`#encode`):** a mode picker for Base64 encode, Base64 decode, URL encode/decode, Hex encode/decode, HTML escape/unescape and Unicode escape/unescape.
+  - Hex: `hexEncode` gives the UTF-8 bytes as lowercase hex with no separators. `hexDecode` ignores whitespace, `:`, `,`, `-` and `0x` prefixes, accepts either case, and rejects non-hex characters, an odd digit count and non-UTF-8 bytes with clear errors.
+  - HTML: `htmlEscape` turns `& < > " '` into `&amp; &lt; &gt; &quot; &#39;`. `htmlUnescape` decodes decimal and hex character references and common named entities in one pass (`&amp;lt;` → `&lt;`); unknown names and code points above U+10FFFF stay as written.
+  - Unicode: `unicodeEscape` writes every UTF-16 code unit above 0x7E as `\uXXXX`. `unicodeUnescape` decodes `\uXXXX` and `\u{X…}`; malformed escapes stay as written. Neither HTML nor Unicode modes ever error.
   - Base64 handles UTF-8 and accepts the URL-safe alphabet without padding. Binary data gets a clear error instead of garbled text.
   - URL decode treats `+` as a space.
   - The input box has `data-private` (decoded Basic auth headers and keys are common), so it is never written to browser storage; text saved there by an older version is deleted on load.
