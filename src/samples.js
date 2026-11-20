@@ -19,6 +19,8 @@ export const SAMPLES = {
   'html-in': '<!DOCTYPE html><html><head><title>Profile</title><style>body{font-family:sans-serif;margin:2em}.tag{background:#eef;padding:2px 6px;border-radius:4px}</style></head><body><h1>Ann Nguyen</h1><p>Developer in <b>Hanoi</b>.</p><ul><li><span class="tag">dev</span></li><li><span class="tag">ops</span></li></ul><a href="mailto:ann@example.com">Email Ann</a></body></html>',
   'jwt-in': SAMPLE_JWT,
   'enc-in': 'Xin chào, thế giới! name=Ann Nguyen&tags=dev,ops',
+  'lines-in': 'banana\nitem10\nApple\nitem2\nbanana\n  cherry  \n\nitem1\n',
+  'time-in': String(nowSec),
   'qr-in': 'https://example.com/?name=Ann Nguyễn',
   left: { left: CONFIG_A, right: CONFIG_B },
   right: { left: CONFIG_A, right: CONFIG_B },

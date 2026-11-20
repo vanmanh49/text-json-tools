@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Group the tab bar, then add eight new tabs (Line Tools, Timestamp, Hash, Regex Tester, JSON ⇄ CSV, JSON → TypeScript, YAML ⇄ JSON, JSON Query) and six Encode/Decode modes (Hex, HTML entities, Unicode escapes).
+**Goal:** Group the tab bar, let users pin favourite tools (Task 10, run before Task 9), then add eight new tabs (Line Tools, Timestamp, Hash, Regex Tester, JSON ⇄ CSV, JSON → TypeScript, YAML ⇄ JSON, JSON Query) and six Encode/Decode modes (Hex, HTML entities, Unicode escapes).
 
 **Architecture:** Every tool is a `TransformTool` wrapper (one input panel → pure function in `tools.js` → read-only output panel) with its options in the toolbar, the way `Encode` already works. Task 3 lets `TransformTool` take an async function, which Hash (`crypto.subtle`) and the two lazily imported libraries (YAML, JSONPath) use. Library-backed functions in `tools.js` take the library module as a parameter, so `tools.js` keeps no imports and the components do the lazy `import()`.
 
@@ -365,6 +365,31 @@ Rules:
 - [ ] **Step 2: Run.** Expected: FAIL.
 - [ ] **Step 3: Install, implement, wire.** Check that `npm run build` prints a separate `jsonpath-plus` chunk.
 - [ ] **Step 4: Run** `npm test`. Expected: PASS. **Commit:** `"Add JSON Query tool (JSONPath, loaded on demand)"`.
+
+---
+
+### Task 10: Pin favourite tools (added by the user mid-run)
+
+**Files:** `src/App.jsx`, `src/App.test.jsx`, `src/style.css`, spec Shell bullet, CLAUDE.md Storage line.
+
+**Interfaces:**
+- Consumes: `NAV`, `GROUPS` (Task 0); `store` (`src/store.js`).
+- Produces: storage key `tjt:pins`, a JSON array of tab ids in pin order (unknown ids dropped on load). `MAX_PINS = 6`.
+
+Behaviour:
+- Every tool row in the group menus and the phone picker is `<div className="tool-row"><a …/><button className="pin" aria-pressed aria-label="Pin <label>" | "Unpin <label>">★/☆</button></div>`. The button is a sibling of the link (a button inside `<a>` is invalid HTML). Clicking it doesn't navigate or close the menu.
+- Pinned tools show as plain tab links (`nav a.pinned`, `aria-current` when current) before the group menus. In the phone picker they show first under a `Pinned` `.tool-group` heading.
+- With 6 pins, unpinned tools' pin buttons are `disabled` with the title "Unpin a tool first (6 at most)".
+- Pins are saved like the theme, whatever the "remember text" setting.
+
+- [ ] **Step 1: Write the failing tests** in `src/App.test.jsx`:
+  - `test('pinning a tool adds a tab and saves it')`: click `button[aria-label="Pin UUID"]`. `nav a.pinned` hrefs are `['#uuid']`, `localStorage['tjt:pins']` is `'["uuid"]'`, and the button is now `aria-label="Unpin UUID"` with `aria-pressed="true"`.
+  - `test('pins load from storage in order, dropping unknown ids')`: set `tjt:pins` to `'["qr","nope","format"]'` before render. `nav a.pinned` hrefs are `['#qr', '#format']`, and the picker's first `.tool-group` is `Pinned`.
+  - `test('a seventh pin is disabled')`: start with 6 pins stored. Every `button.pin[aria-pressed="false"]` is disabled.
+- [ ] **Step 2: Run** `npx vitest run src/App.test.jsx`. Expected: FAIL.
+- [ ] **Step 3: Implement** in `App.jsx` (`pins` state from `store.get('tjt:pins')`, filtered against NAV, written back on change) and CSS (`.tool-row` flex, `.pin` icon button, `nav a.pinned` styled like the old tabs).
+- [ ] **Step 4: Run** `npm test`. Expected: PASS. Check in a browser at 1400 px and 390 px.
+- [ ] **Step 5: Update the spec and CLAUDE.md** and **commit:** `"Let users pin favourite tools to the top bar"`.
 
 ---
 

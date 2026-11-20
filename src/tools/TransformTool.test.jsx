@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { TextToJson, JsonToText, Minify, Jwt, Encode } from './TransformTool.jsx';
+import { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp } from './TransformTool.jsx';
 import { textStore } from '../textStore.js';
 import { SAMPLES } from '../samples.js';
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
   cleanup();
-  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in']) textStore.set(id, '');
+  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in']) textStore.set(id, '');
 });
 
 const err = c => c.querySelector('.err').textContent;
@@ -61,4 +61,11 @@ test('panel messages show on the err line and clear when the input changes', asy
   expect(err(container)).toContain('blocked clipboard');
   act(() => textStore.set('enc-in', 'x'));
   expect(err(container)).toBe('');
+});
+
+test('timestamp Now fills the input', () => {
+  const { container } = render(<Timestamp />);
+  fireEvent.click(screen.getByRole('button', { name: 'Now' }));
+  expect(container.querySelector('#time-in').value).toMatch(/^\d{10}$/);
+  expect(container.querySelector('#time-out').value).toMatch(/^Read as {7}Unix seconds/);
 });

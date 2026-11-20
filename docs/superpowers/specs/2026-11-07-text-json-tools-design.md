@@ -12,7 +12,7 @@ A public, static website of browser-only utilities. The first five:
 3. **JSON Minify**: minify formatted JSON to one line.
 4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
 
-Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code and UUID (ten tools in all).
+Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools and Timestamp (twelve tools in all).
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
 
@@ -124,6 +124,12 @@ Empty input to the three JSON tools returns `''` without an error.
   - v4: random. v7: 48-bit Unix ms then random; a batch is sorted so it ascends. v1 and v6: 100 ns ticks since 1582-10-15, one tick apart within a batch, a random clock sequence and a random node with the multicast bit set (never the MAC address). v6 is v1 with the time fields reordered so it sorts.
   - v3 and v5 (name-based) are not offered: they need a namespace and name input and MD5 / SHA-1.
   - Nothing is saved; the list is new on every load.
+- **Line Tools (`#lines`):** an Action picker over one Lines panel → Result panel.
+  - `lineTool(s, op)` with `op` from `LINE_OPS`: Sort A → Z, Sort Z → A, Remove duplicates, Reverse order, Trim spaces, Remove empty lines, UPPERCASE, lowercase.
+  - Lines split on LF or CRLF; one trailing newline is dropped and the output uses LF. Sorting is natural (`localeCompare` with `numeric`, so `item2` comes before `item10`). Remove duplicates keeps the first of exact copies; Remove empty lines also drops whitespace-only lines.
+- **Timestamp (`#time`):** a Timestamp or date panel → Converted panel, with a **Now** button that puts the current Unix seconds in the input.
+  - `describeTime(s)`: digits only (optional `-` and decimals) is a Unix timestamp, read by size: below 1e11 seconds, below 1e14 milliseconds, below 1e17 microseconds, else nanoseconds. Anything else goes through `Date.parse`, so a date without a zone is local time. Unreadable input gets a clear error.
+  - The output is one labelled line each: Read as (which reading was used), Unix seconds, Unix ms, ISO 8601, UTC, Local (the browser's locale and time zone) and Relative ("5 days ago", "in 2 hours").
 - **Compare as JSON:** a checkbox in the Compare toolbar.
   - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.
   - The originals go on the undo stack.

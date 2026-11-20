@@ -448,3 +448,53 @@ export function formatHtml(s) {
 // The iframe's empty sandbox already stops scripts, forms and popups.
 const PREVIEW_HEAD = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data: blob:; font-src data:"><base target="_blank">';
 export const htmlPreview = s => s.replace(/^\s*(<!doctype[^>]*>)?/i, '$1' + PREVIEW_HEAD);
+
+export const LINE_OPS = [
+  ['sort', 'Sort A → Z'], ['sort-desc', 'Sort Z → A'], ['unique', 'Remove duplicates'], ['reverse', 'Reverse order'],
+  ['trim', 'Trim spaces'], ['no-empty', 'Remove empty lines'], ['upper', 'UPPERCASE'], ['lower', 'lowercase'],
+];
+const byText = (a, b) => a.localeCompare(b, undefined, { numeric: true }); // natural: item2 before item10
+const LINE_FNS = {
+  sort: l => l.sort(byText), 'sort-desc': l => l.sort(byText).reverse(), unique: l => [...new Set(l)], reverse: l => l.reverse(),
+  trim: l => l.map(x => x.trim()), 'no-empty': l => l.filter(x => x.trim()), upper: l => l.map(x => x.toUpperCase()), lower: l => l.map(x => x.toLowerCase()),
+};
+
+// Applies one LINE_OPS operation to the lines of `s` (LF or CRLF); one trailing newline is dropped, output uses LF.
+export function lineTool(s, op) {
+  if (!Object.hasOwn(LINE_FNS, op)) throw new Error(`Unknown line operation: ${op}`);
+  if (!s.trim()) return '';
+  const lines = s.split(/\r?\n/);
+  if (lines.at(-1) === '') lines.pop();
+  return LINE_FNS[op](lines).join('\n');
+}
+
+// A digits-only timestamp's unit is guessed from its size: [upper bound, unit, ms per unit].
+const TIME_UNITS = [[1e11, 'seconds', 1000], [1e14, 'milliseconds', 1], [1e17, 'microseconds', 1e-3], [Infinity, 'nanoseconds', 1e-6]];
+
+// A Unix timestamp or a date as seconds, ms, ISO, UTC, local and relative time, one labelled line each.
+export function describeTime(s, now = Date.now()) {
+  const t = s.trim();
+  if (!t) return '';
+  let ms, read;
+  if (/^-?\d+(\.\d+)?$/.test(t)) {
+    const n = Number(t);
+    const [, unit, perUnit] = TIME_UNITS.find(([max]) => Math.abs(n) < max);
+    ms = n * perUnit;
+    read = 'Unix ' + unit;
+  } else {
+    ms = Date.parse(t);
+    read = 'date text (local time unless it names a zone)';
+  }
+  const date = new Date(ms);
+  if (isNaN(date)) throw new Error("This isn't a Unix timestamp or a date this browser can read.");
+  const d = (date.getTime() - now) / 1000;
+  return [
+    ['Read as', read],
+    ['Unix seconds', Math.floor(date.getTime() / 1000)],
+    ['Unix ms', date.getTime()],
+    ['ISO 8601', date.toISOString()],
+    ['UTC', date.toUTCString()],
+    ['Local', new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'long' }).format(date)],
+    ['Relative', Math.abs(d) < 1 ? 'now' : d < 0 ? `${span(-d)} ago` : `in ${span(d)}`],
+  ].map(([k, v]) => k.padEnd(14) + v).join('\n');
+}

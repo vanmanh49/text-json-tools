@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime } from './tools.js';
 import jsQR from 'jsqr';
 
 test('textToJson unescapes a quoted string', () => {
@@ -16,7 +16,7 @@ test('textToJson throws on invalid input', () => {
   assert.throws(() => textToJson('nope'));
 });
 test('empty or whitespace-only input returns empty string', () => {
-  for (const f of [textToJson, jsonToText, minify]) {
+  for (const f of [textToJson, jsonToText, minify, s => lineTool(s, 'sort'), describeTime]) {
     assert.equal(f(''), '');
     assert.equal(f('  \n\t '), '');
   }
@@ -446,4 +446,40 @@ test('unicodeEscape escapes non-ASCII code units and unicodeUnescape reverses it
 });
 test('unicodeUnescape decodes \\u{…} and leaves malformed escapes', () => {
   assert.equal(unicodeUnescape('\\u{1F600} \\u12 \\u{110000}'), '😀 \\u12 \\u{110000}');
+});
+
+test('lineTool sorts naturally and drops one trailing newline', () => {
+  assert.equal(lineTool('b\nItem10\na\nitem2\nItem1\n', 'sort'), 'a\nb\nItem1\nitem2\nItem10');
+  assert.equal(lineTool('b\nItem10\na\nitem2\nItem1\n', 'sort-desc'), 'Item10\nitem2\nItem1\nb\na');
+});
+test('lineTool sorts Vietnamese like localeCompare', () => {
+  assert.equal(lineTool('ả\nă\na', 'sort'), ['ả', 'ă', 'a'].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).join('\n'));
+});
+test('lineTool unique keeps the first and handles CRLF', () => {
+  assert.equal(lineTool('x\r\ny\r\nx', 'unique'), 'x\ny');
+});
+test('lineTool no-empty and trim', () => {
+  assert.equal(lineTool(' a \n\n  \nb', 'no-empty'), ' a \nb');
+  assert.equal(lineTool(' a \n\n  \nb', 'trim'), 'a\n\n\nb');
+});
+test('lineTool reverse, upper, lower and unknown op', () => {
+  assert.equal(lineTool('a\nB\nc', 'reverse'), 'c\nB\na');
+  assert.equal(lineTool('a\nB', 'upper'), 'A\nB');
+  assert.equal(lineTool('a\nB', 'lower'), 'a\nb');
+  assert.throws(() => lineTool('x', 'nope'));
+});
+test('describeTime reads 10 digits as seconds and 13 as milliseconds', () => {
+  const s = describeTime('1700000000', 1700000060000);
+  assert.match(s, /^Read as       Unix seconds$/m);
+  assert.match(s, /^ISO 8601      2023-11-14T22:13:20\.000Z$/m);
+  assert.match(s, /^Relative      1 minute ago$/m);
+  const ms = describeTime('1700000000000', 1700000060000);
+  assert.match(ms, /^Read as       Unix milliseconds$/m);
+  assert.match(ms, /^ISO 8601      2023-11-14T22:13:20\.000Z$/m);
+});
+test('describeTime reads date text and says when it is local time', () => {
+  assert.match(describeTime('2023-11-14T22:13:20Z'), /^Unix seconds  1700000000$/m);
+  assert.match(describeTime('2023-11-14 22:13:20'), /^Read as       date text \(local time/m);
+  assert.match(describeTime('1700000000', 1699999940000), /^Relative      in 1 minute$/m);
+  assert.throws(() => describeTime('soon'), /can read/);
 });

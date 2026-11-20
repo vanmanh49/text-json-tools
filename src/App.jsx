@@ -3,14 +3,14 @@ import { store, settings } from './store.js';
 import { textStore } from './textStore.js';
 import { GROUPS, NAV, useHashTab } from './useHashTab.js';
 import { IconButton } from './ui/IconButton.jsx';
-import { TextToJson, JsonToText, Minify, Jwt, Encode } from './tools/TransformTool.jsx';
+import { TextToJson, JsonToText, Minify, Jwt, Encode, Lines, Timestamp } from './tools/TransformTool.jsx';
 import FormatTool from './tools/FormatTool.jsx';
 import CompareTool from './tools/CompareTool.jsx';
 import QrTool from './tools/QrTool.jsx';
 import UuidTool from './tools/UuidTool.jsx';
 import HtmlTool from './tools/HtmlTool.jsx';
 
-const TOOLS = { format: FormatTool, compare: CompareTool, 'text-to-json': TextToJson, 'json-to-text': JsonToText, minify: Minify, html: HtmlTool, jwt: Jwt, encode: Encode, qr: QrTool, uuid: UuidTool };
+const TOOLS = { format: FormatTool, compare: CompareTool, 'text-to-json': TextToJson, 'json-to-text': JsonToText, minify: Minify, html: HtmlTool, jwt: Jwt, encode: Encode, qr: QrTool, uuid: UuidTool, lines: Lines, time: Timestamp };
 
 // Theme: System → Light → Dark. The initial value is applied by an inline script in <head>.
 const THEMES = ['system', 'light', 'dark'];

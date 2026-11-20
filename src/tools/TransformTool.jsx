@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Panel from '../ui/Panel.jsx';
 import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
-import { base64Decode, base64Encode, decodeJwt, hexDecode, hexEncode, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
+import { setText } from '../setText.js';
+import { LINE_OPS, base64Decode, base64Encode, decodeJwt, describeTime, lineTool, hexDecode, hexEncode, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
 
 // One input panel, one output panel, and the tool's function between them.
 export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
@@ -96,3 +97,25 @@ export function Encode({ hidden }) {
       inId="enc-in" inLabel="Input" inExt="txt" outId="enc-out" outLabel="Output" outExt="txt" fn={fn} toolbar={toolbar} />
   );
 }
+
+export function Lines({ hidden }) {
+  const [op, setOp] = useState('sort');
+  const fn = useCallback(s => lineTool(s, op), [op]);
+  const toolbar = (
+    <label className="inline">Action
+      <select id="lines-mode" value={op} onChange={e => setOp(e.target.value)}>
+        {LINE_OPS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+      </select>
+    </label>
+  );
+  return (
+    <TransformTool tab="lines" hidden={hidden} desc="Sort, dedupe, trim or change the case of lines."
+      inId="lines-in" inLabel="Lines" inExt="txt" outId="lines-out" outLabel="Result" outExt="txt" fn={fn} toolbar={toolbar} />
+  );
+}
+
+export const Timestamp = ({ hidden }) => (
+  <TransformTool tab="time" hidden={hidden} desc="Convert a Unix timestamp to a date, or a date to a timestamp."
+    inId="time-in" inLabel="Timestamp or date" inExt="txt" outId="time-out" outLabel="Converted" outExt="txt" fn={describeTime}
+    toolbar={<button id="time-now" type="button" onClick={() => setText('time-in', String(Math.floor(Date.now() / 1000)))}>Now</button>} />
+);
