@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { store, settings, MAX_SAVE } from './store.js';
 
 export const PRIVATE_IDS = new Set(['jwt-in', 'qr-in', 'enc-in', 'hash-in']); // tokens, Wi-Fi passwords, decoded Basic auth, hashed passwords
-export const EDITABLE_IDS = ['fmt-in', 't2j-in', 'j2t-in', 'min-in', 'html-in', 'jwt-in', 'enc-in', 'qr-in', 'lines-in', 'time-in', 'hash-in', 're-in', 'csv-in', 'ts-in', 'left', 'right'];
+export const EDITABLE_IDS = ['fmt-in', 't2j-in', 'j2t-in', 'min-in', 'html-in', 'jwt-in', 'enc-in', 'qr-in', 'lines-in', 'time-in', 'hash-in', 're-in', 'csv-in', 'ts-in', 'yaml-in', 'left', 'right'];
 const PERSISTED = EDITABLE_IDS.filter(id => !PRIVATE_IDS.has(id));
 const key = id => 'tjt:text:' + id;
 

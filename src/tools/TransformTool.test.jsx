@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import TransformTool, { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp, Regex, Csv } from './TransformTool.jsx';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import TransformTool, { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp, Regex, Csv, Yaml } from './TransformTool.jsx';
 import { textStore } from '../textStore.js';
 import { SAMPLES } from '../samples.js';
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
   cleanup();
-  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in', 're-in', 'csv-in', 'ts-in']) textStore.set(id, '');
+  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in', 're-in', 'csv-in', 'ts-in', 'yaml-in']) textStore.set(id, '');
 });
 
 const err = c => c.querySelector('.err').textContent;
@@ -104,4 +104,16 @@ test('switching CSV direction keeps the input', () => {
   fireEvent.change(container.querySelector('#csv-dir'), { target: { value: 'csv-to-json' } });
   expect(container.querySelector('#csv-in').value).toBe('a\n1');
   expect(container.querySelector('#csv-out').value).toBe('[\n  {\n    "a": "1"\n  }\n]');
+});
+
+test('yaml converts once its tab is shown, in both directions', async () => {
+  const { container, rerender } = render(<Yaml hidden />);
+  act(() => textStore.set('yaml-in', 'a: 1'));
+  await act(async () => {});
+  expect(container.querySelector('#yaml-out').value).toBe('');
+  rerender(<Yaml hidden={false} />);
+  await waitFor(() => expect(container.querySelector('#yaml-out').value).toBe('{\n  "a": 1\n}'));
+  act(() => textStore.set('yaml-in', '{"b":[1]}'));
+  fireEvent.change(container.querySelector('#yaml-dir'), { target: { value: 'json-to-yaml' } });
+  await waitFor(() => expect(container.querySelector('#yaml-out').value).toBe('b:\n  - 1\n'));
 });

@@ -664,3 +664,19 @@ export function jsonToTs(s) {
   }
   return out.join('\n\n');
 }
+
+// `yaml` is the js-yaml module, passed in so the page loads it only when the YAML tool is used.
+// YAML 1.2 core schema plus merge keys (<<), so dates stay text and yes/no stay strings. One document only.
+export function yamlToJson(s, yaml) {
+  if (!s.trim()) return '';
+  let v;
+  try { v = yaml.load(s, { schema: yaml.CORE_SCHEMA.withTags(yaml.mergeTag) }); }
+  catch (e) { throw new Error(e.message.split('\n')[0].replace(/\((\d+):(\d+)\)$/, '(line $1, column $2)')); } // drop the code snippet below
+  return JSON.stringify(v, null, 2);
+}
+
+// lineWidth -1: never fold long strings; noRefs: repeated values are written out, not as anchors.
+export function jsonToYaml(s, yaml) {
+  if (!s.trim()) return '';
+  return yaml.dump(JSON.parse(s), { lineWidth: -1, noRefs: true });
+}

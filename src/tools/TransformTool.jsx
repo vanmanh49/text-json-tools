@@ -3,7 +3,7 @@ import Panel from '../ui/Panel.jsx';
 import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
 import { setText } from '../setText.js';
-import { CSV_DELIMS, HASH_ALGOS, LINE_OPS, base64Decode, csvToJson, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, jsonToCsv, jsonToTs, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
+import { CSV_DELIMS, HASH_ALGOS, LINE_OPS, base64Decode, csvToJson, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, jsonToCsv, jsonToTs, jsonToYaml, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode, yamlToJson } from '../tools.js';
 
 // One input panel, one output panel, and the tool's function between them.
 export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
@@ -209,3 +209,22 @@ export const JsonToTs = ({ hidden }) => (
   <TransformTool tab="ts" hidden={hidden} desc="Generate TypeScript interfaces from a JSON sample. Objects in one array are merged, and keys missing from some of them become optional."
     inId="ts-in" inLabel="JSON" inExt="json" outId="ts-out" outLabel="TypeScript" outExt="ts" fn={jsonToTs} />
 );
+
+export function Yaml({ hidden }) {
+  const [dir, setDir] = useState('yaml-to-json');
+  const toJson = dir === 'yaml-to-json';
+  // js-yaml is its own chunk: load it only for text on a visible tab (every tool renders, hidden, at page load).
+  const fn = useCallback(s => (hidden || !s.trim() ? '' : import('js-yaml').then(yaml => (toJson ? yamlToJson : jsonToYaml)(s, yaml))), [toJson, hidden]);
+  const toolbar = (
+    <label className="inline">Convert
+      <select id="yaml-dir" value={dir} onChange={e => setDir(e.target.value)}>
+        <option value="yaml-to-json">YAML → JSON</option>
+        <option value="json-to-yaml">JSON → YAML</option>
+      </select>
+    </label>
+  );
+  return (
+    <TransformTool tab="yaml" hidden={hidden} desc="Convert YAML to JSON or JSON to YAML. Comments are not kept, and dates stay text."
+      inId="yaml-in" inLabel={toJson ? 'YAML' : 'JSON'} inExt={toJson ? 'yaml' : 'json'} outId="yaml-out" outLabel={toJson ? 'JSON' : 'YAML'} outExt={toJson ? 'json' : 'yaml'} fn={fn} toolbar={toolbar} />
+  );
+}

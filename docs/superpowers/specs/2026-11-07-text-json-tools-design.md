@@ -12,7 +12,7 @@ A public, static website of browser-only utilities. The first five:
 3. **JSON Minify**: minify formatted JSON to one line.
 4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
 
-Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp, Hash, Regex Tester, JSON ⇄ CSV and JSON → TypeScript (sixteen tools in all).
+Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp, Hash, Regex Tester, JSON ⇄ CSV, JSON → TypeScript and YAML ⇄ JSON (seventeen tools in all).
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
 
@@ -24,7 +24,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 
 - Static files only. Built with Vite (`npm run build`). GitHub Actions deploys `dist/` to GitHub Pages on every push to `main`; `dist/` also works on any static host.
 - React 19 with plain CSS and JS (ES modules, JSX).
-- Runtime dependencies: React, React DOM, `jsdiff` (`diff@9.0.0`), `qrcode@1.5.4` and `jsqr@1.4.0`, installed
+- Runtime dependencies: React, React DOM, `jsdiff` (`diff@9.0.0`), `qrcode@1.5.4`, `jsqr@1.4.0` and `js-yaml@5.5.0` (loaded only when the YAML tool converts), installed
   from npm and bundled into `dist/` by Vite, so the page loads no third-party
   script. The tests import the same `"diff"` from `node_modules`.
 - Works on desktop and phone widths, light and dark theme.
@@ -147,6 +147,11 @@ Empty input to the three JSON tools returns `''` without an error.
   - Objects in one array merge into one interface: a key missing from some is optional (`key?:`), and a key with different types gets a union, first seen first.
   - Names: an object's interface is its key in PascalCase; an array's item interface is the singular (`users` → `User`, `categories` → `Category`, otherwise `+Item`, so `data` → `DataItem`). A name starting with a digit gets a `T`, and a repeated name gets `2`, `3`, …. Keys that aren't plain identifiers are quoted.
   - A top-level array or value becomes `export type Root = …;` (array items are `RootItem`).
+- **YAML ⇄ JSON (`#yaml`):** a Convert picker (YAML → JSON, JSON → YAML); labels and file types follow the direction.
+  - `yamlToJson(s, yaml)` loads one YAML 1.2 document with js-yaml's core schema plus merge keys (`<<`): anchors and aliases resolve, dates and `yes`/`no` stay strings. Errors keep their first line with the place as "(line L, column C)"; several documents are an error.
+  - `jsonToYaml(s, yaml)` dumps with no line folding and no anchors.
+  - `yaml` is the js-yaml module, passed in by the component, which imports it only when its tab is visible and has text, so it is its own chunk and never loads for other tools.
+  - Known limits: comments are lost, `.inf`/`.nan` become `null`, and numbers above 2^53 lose precision as with `JSON.parse`.
 - **Async tools:** a `TransformTool` function may return a promise. The output is empty until it settles, and a result for text that has since changed is dropped, so a slow old result never replaces a newer one. A rejection's message goes to the error line.
 - **Compare as JSON:** a checkbox in the Compare toolbar.
   - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.

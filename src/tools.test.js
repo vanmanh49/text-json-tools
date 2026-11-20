@@ -1,7 +1,8 @@
 import { test, vi } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS, regexMatches, regexReplace, MAX_MATCHES, jsonToCsv, csvToJson, CSV_DELIMS, jsonToTs } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS, regexMatches, regexReplace, MAX_MATCHES, jsonToCsv, csvToJson, CSV_DELIMS, jsonToTs, yamlToJson, jsonToYaml } from './tools.js';
 import jsQR from 'jsqr';
+import * as yaml from 'js-yaml';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -596,4 +597,23 @@ test('jsonToTs unions differing types and types empty objects as records', () =>
   assert.match(jsonToTs('{"v":[{"n":1},{"n":"x"}]}'), /  n: number \| string;/);
   assert.match(jsonToTs('{"e":{}}'), /  e: Record<string, unknown>;/);
   assert.match(jsonToTs('{"m":[[1],[2,3]]}'), /  m: number\[\]\[\];/);
+});
+
+test('yamlToJson keeps dates as text and resolves anchors and merge keys', () => {
+  assert.deepEqual(JSON.parse(yamlToJson('a: 1\nb: [x, "2"]\nd: 2024-01-01\nyes: no\nbase: &b {k: v}\nc:\n  <<: *b\n', yaml)),
+    { a: 1, b: ['x', '2'], d: '2024-01-01', yes: 'no', base: { k: 'v' }, c: { k: 'v' } });
+});
+test('yamlToJson reports bad YAML and several documents', () => {
+  assert.throws(() => yamlToJson('a: [', yaml), { message: 'unexpected end of the stream within a flow collection (line 1, column 5)' });
+  assert.throws(() => yamlToJson('a: 1\n---\nb: 2', yaml), /single document/);
+});
+test('jsonToYaml does not fold long strings and round-trips', () => {
+  const long = '{"a":1,"s":"long text that should not be folded even past eighty characters, really not folded at all"}';
+  assert.ok(!jsonToYaml(long, yaml).trim().includes('\n  '));
+  const x = JSON.stringify({ name: 'Ann Nguyễn', n: 3, ok: true, none: null, tags: ['dev', 'yes', '007'], nested: { list: [{ a: 1 }] } });
+  assert.equal(yamlToJson(jsonToYaml(x, yaml), yaml), JSON.stringify(JSON.parse(x), null, 2));
+});
+test('yaml functions return empty for empty input', () => {
+  assert.equal(yamlToJson('  ', yaml), '');
+  assert.equal(jsonToYaml('', yaml), '');
 });
