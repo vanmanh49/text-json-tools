@@ -3,7 +3,7 @@ import Panel from '../ui/Panel.jsx';
 import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
 import { setText } from '../setText.js';
-import { CSV_DELIMS, HASH_ALGOS, LINE_OPS, base64Decode, csvToJson, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, jsonToCsv, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
+import { CSV_DELIMS, HASH_ALGOS, LINE_OPS, base64Decode, csvToJson, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, jsonToCsv, jsonToTs, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
 
 // One input panel, one output panel, and the tool's function between them.
 export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
@@ -204,3 +204,8 @@ export function Csv({ hidden }) {
       inId="csv-in" inLabel={toCsv ? 'JSON' : 'CSV'} inExt={toCsv ? 'json' : 'csv'} outId="csv-out" outLabel={toCsv ? 'CSV' : 'JSON'} outExt={toCsv ? 'csv' : 'json'} fn={fn} toolbar={toolbar} />
   );
 }
+
+export const JsonToTs = ({ hidden }) => (
+  <TransformTool tab="ts" hidden={hidden} desc="Generate TypeScript interfaces from a JSON sample. Objects in one array are merged, and keys missing from some of them become optional."
+    inId="ts-in" inLabel="JSON" inExt="json" outId="ts-out" outLabel="TypeScript" outExt="ts" fn={jsonToTs} />
+);

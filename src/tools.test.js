@@ -1,6 +1,6 @@
 import { test, vi } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS, regexMatches, regexReplace, MAX_MATCHES, jsonToCsv, csvToJson, CSV_DELIMS } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS, regexMatches, regexReplace, MAX_MATCHES, jsonToCsv, csvToJson, CSV_DELIMS, jsonToTs } from './tools.js';
 import jsQR from 'jsqr';
 
 test('textToJson unescapes a quoted string', () => {
@@ -16,7 +16,7 @@ test('textToJson throws on invalid input', () => {
   assert.throws(() => textToJson('nope'));
 });
 test('empty or whitespace-only input returns empty string', () => {
-  for (const f of [textToJson, jsonToText, minify, s => lineTool(s, 'sort'), describeTime, jsonToCsv, csvToJson]) {
+  for (const f of [textToJson, jsonToText, minify, s => lineTool(s, 'sort'), describeTime, jsonToCsv, csvToJson, jsonToTs]) {
     assert.equal(f(''), '');
     assert.equal(f('  \n\t '), '');
   }
@@ -559,4 +559,41 @@ test('jsonToCsv handles arrays of arrays, primitives and a single object', () =>
 test('jsonToCsv rejects mixed items and top-level primitives', () => {
   assert.throws(() => jsonToCsv('[{"a":1},2]'), /item 2 is a number/);
   assert.throws(() => jsonToCsv('3'), /array or object/);
+});
+
+test('jsonToTs writes nested and array-item interfaces, optional keys and quoted names', () => {
+  assert.equal(jsonToTs('{"id":1,"name":"Ann","tags":["a"],"address":{"city":"Hanoi"},"users":[{"id":1},{"id":2,"email":null}],"first-name":"A"}'), `export interface Root {
+  id: number;
+  name: string;
+  tags: string[];
+  address: Address;
+  users: User[];
+  "first-name": string;
+}
+
+export interface Address {
+  city: string;
+}
+
+export interface User {
+  id: number;
+  email?: null;
+}`);
+});
+test('jsonToTs types top-level arrays and values', () => {
+  assert.equal(jsonToTs('[1,"a",[]]'), 'export type Root = (number | string | unknown[])[];');
+  assert.equal(jsonToTs('"x"'), 'export type Root = string;');
+  assert.equal(jsonToTs('[{"a":true}]'), 'export type Root = RootItem[];\n\nexport interface RootItem {\n  a: boolean;\n}');
+});
+test('jsonToTs names repeated and plural keys', () => {
+  assert.match(jsonToTs('{"a":{"x":1},"b":{"a":{"y":2}}}'), /interface A \{\n  x: number;\n\}[\s\S]*interface A2 \{\n  y: number;\n\}/);
+  const t = jsonToTs('{"categories":[{"v":1}],"data":[{"v":1}],"2fa":{"on":true}}');
+  assert.match(t, /categories: Category\[\];/);
+  assert.match(t, /data: DataItem\[\];/);
+  assert.match(t, /"2fa": T2fa;/);
+});
+test('jsonToTs unions differing types and types empty objects as records', () => {
+  assert.match(jsonToTs('{"v":[{"n":1},{"n":"x"}]}'), /  n: number \| string;/);
+  assert.match(jsonToTs('{"e":{}}'), /  e: Record<string, unknown>;/);
+  assert.match(jsonToTs('{"m":[[1],[2,3]]}'), /  m: number\[\]\[\];/);
 });

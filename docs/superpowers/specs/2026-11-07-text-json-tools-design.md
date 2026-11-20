@@ -12,7 +12,7 @@ A public, static website of browser-only utilities. The first five:
 3. **JSON Minify**: minify formatted JSON to one line.
 4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
 
-Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp, Hash, Regex Tester and JSON ⇄ CSV (fifteen tools in all).
+Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp, Hash, Regex Tester, JSON ⇄ CSV and JSON → TypeScript (sixteen tools in all).
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
 
@@ -142,6 +142,11 @@ Empty input to the three JSON tools returns `''` without an error.
   - `jsonToCsv(s, delim)`: an array of objects gets a header of every key, first seen first, and a missing key is an empty cell. An array of arrays becomes rows with no header, an array of values one `value` column, and a single object one row. Strings are written as they are, `null` as empty, nested objects and arrays as JSON. A cell is quoted when it holds the delimiter, a quote or a line break, or starts or ends with whitespace; quotes inside are doubled. Lines end in LF. Mixing objects with other items, or a top-level value, gets a clear error.
   - `csvToJson(s, delim)`: RFC 4180 (quoted fields may hold the delimiter, `""` and line breaks; LF or CRLF), a leading BOM is dropped and blank lines are skipped. The first row is the header; a blank name becomes `columnN` and a repeated one is an error. Every value stays a string (`007` stays `007`). A row with more fields than the header, or a quote that never closes, is an error naming the row; a shorter row is padded with empty strings.
   - Known limit: cells starting with `=`, `+`, `-` or `@` are not escaped, so a spreadsheet may treat them as formulas; escaping would change the data.
+- **JSON → TypeScript (`#ts`):** a JSON panel → TypeScript panel.
+  - `jsonToTs(s)` writes `export interface` declarations, root (`Root`) first, then nested ones in the order they appear. Types are `string`, `number`, `boolean`, `null`, an interface name, `T[]`, `(A | B)[]` for mixed arrays, `unknown[]` for an empty array and `Record<string, unknown>` for an empty object.
+  - Objects in one array merge into one interface: a key missing from some is optional (`key?:`), and a key with different types gets a union, first seen first.
+  - Names: an object's interface is its key in PascalCase; an array's item interface is the singular (`users` → `User`, `categories` → `Category`, otherwise `+Item`, so `data` → `DataItem`). A name starting with a digit gets a `T`, and a repeated name gets `2`, `3`, …. Keys that aren't plain identifiers are quoted.
+  - A top-level array or value becomes `export type Root = …;` (array items are `RootItem`).
 - **Async tools:** a `TransformTool` function may return a promise. The output is empty until it settles, and a result for text that has since changed is dropped, so a slow old result never replaces a newer one. A rejection's message goes to the error line.
 - **Compare as JSON:** a checkbox in the Compare toolbar.
   - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.

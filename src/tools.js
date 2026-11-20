@@ -605,3 +605,62 @@ export function csvToJson(s, delim = ',') {
     return Object.fromEntries(header.map((h, j) => [h, r[j] ?? '']));
   }), null, 2);
 }
+
+// TypeScript interfaces for a JSON sample. Pass 1 merges every value seen at a position into a shape:
+// a Map from kind ('string' | 'number' | 'boolean' | 'null' | 'object' | 'array') to its details, in first-seen
+// order. Objects in one array share a shape, so a key missing from some of them becomes optional.
+function addShape(shape, v) {
+  const k = v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v;
+  if (k === 'object') {
+    const o = shape.get(k) ?? { n: 0, keys: new Map() };
+    o.n++;
+    for (const [key, val] of Object.entries(v)) {
+      const f = o.keys.get(key) ?? { count: 0, shape: new Map() };
+      f.count++;
+      addShape(f.shape, val);
+      o.keys.set(key, f);
+    }
+    shape.set(k, o);
+  } else if (k === 'array') {
+    const elems = shape.get(k) ?? new Map();
+    for (const val of v) addShape(elems, val);
+    shape.set(k, elems);
+  } else shape.set(k, true);
+}
+
+const pascal = key => {
+  const name = key.replace(/(\p{Ll}|\p{N})(\p{Lu})/gu, '$1 $2').split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+    .map(w => w[0].toUpperCase() + w.slice(1)).join('') || 'Item';
+  return /^\p{N}/u.test(name) ? 'T' + name : name;
+};
+// users → User, categories → Category, data → DataItem
+const singular = name => (/ies$/.test(name) ? name.slice(0, -3) + 'y' : /[^s]s$/.test(name) ? name.slice(0, -1) : name + 'Item');
+
+export function jsonToTs(s) {
+  if (!s.trim()) return '';
+  const root = new Map();
+  addShape(root, JSON.parse(s));
+  // Pass 2: print. Each interface takes its slot before its children, so the output reads top-down.
+  const out = [], used = new Set();
+  const unique = name => { let n = name; for (let i = 2; used.has(n); i++) n = name + i; used.add(n); return n; };
+  const typeOf = (shape, hint) => [...shape].map(([k, d]) => (k === 'object' ? objectType(d, hint) : k === 'array' ? arrayType(d, hint) : k)).join(' | ');
+  const arrayType = (elems, hint) => {
+    if (!elems.size) return 'unknown[]';
+    const t = typeOf(elems, singular(hint));
+    return (elems.size > 1 ? `(${t})` : t) + '[]';
+  };
+  const objectType = (o, hint) => {
+    if (!o.keys.size) return 'Record<string, unknown>';
+    const name = unique(hint), slot = out.push('') - 1;
+    const fields = [...o.keys].map(([key, f]) =>
+      `  ${/^[A-Za-z_$][\w$]*$/.test(key) ? key : JSON.stringify(key)}${f.count < o.n ? '?' : ''}: ${typeOf(f.shape, pascal(key))};`);
+    out[slot] = `export interface ${name} {\n${fields.join('\n')}\n}`;
+    return name;
+  };
+  if (root.has('object') && root.get('object').keys.size) objectType(root.get('object'), 'Root');
+  else {
+    used.add('Root');
+    out.unshift(`export type Root = ${typeOf(root, 'Root')};`);
+  }
+  return out.join('\n\n');
+}

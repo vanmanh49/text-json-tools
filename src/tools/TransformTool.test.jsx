@@ -7,7 +7,7 @@ import { SAMPLES } from '../samples.js';
 beforeEach(() => localStorage.clear());
 afterEach(() => {
   cleanup();
-  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in', 're-in', 'csv-in']) textStore.set(id, '');
+  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in', 're-in', 'csv-in', 'ts-in']) textStore.set(id, '');
 });
 
 const err = c => c.querySelector('.err').textContent;
