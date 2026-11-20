@@ -142,5 +142,6 @@ test('pinned tabs show a pin icon hidden from screen readers', () => {
   const { container } = render(<App />);
   const tab = container.querySelector('nav a.pinned');
   expect(tab.querySelector('svg.pin-icon[aria-hidden="true"]')).not.toBeNull();
+  expect(tab.querySelector('svg.pin-icon path[fill="currentColor"]')).not.toBeNull(); // solid: reads as pinned, not "pin me"
   expect(tab.textContent).toBe('UUID');
 });
