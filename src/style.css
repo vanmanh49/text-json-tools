@@ -198,6 +198,7 @@ button.link:hover:not(:disabled) { background: none; }
 #re-pattern { width: 18em; }
 #re-flags { width: 4em; }
 #re-replace { width: 12em; }
+#query-path { width: 24em; }
 .panel {
   display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden;
   background: var(--panel); border: 1px solid var(--border); border-radius: 10px;

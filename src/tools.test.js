@@ -1,8 +1,9 @@
 import { test, vi } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS, regexMatches, regexReplace, MAX_MATCHES, jsonToCsv, csvToJson, CSV_DELIMS, jsonToTs, yamlToJson, jsonToYaml } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS, regexMatches, regexReplace, MAX_MATCHES, jsonToCsv, csvToJson, CSV_DELIMS, jsonToTs, yamlToJson, jsonToYaml, jsonQuery } from './tools.js';
 import jsQR from 'jsqr';
 import * as yaml from 'js-yaml';
+import { JSONPath } from 'jsonpath-plus';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -616,4 +617,23 @@ test('jsonToYaml does not fold long strings and round-trips', () => {
 test('yaml functions return empty for empty input', () => {
   assert.equal(yamlToJson('  ', yaml), '');
   assert.equal(jsonToYaml('', yaml), '');
+});
+
+const QJ = JSON.stringify({ items: [{ n: 'a', price: 5 }, { n: 'b', price: 20 }], tags: ['x', 'y'] });
+test('jsonQuery returns every match as a pretty JSON array', () => {
+  assert.equal(jsonQuery(QJ, '$.tags[*]', JSONPath), '[\n  "x",\n  "y"\n]');
+  assert.deepEqual(JSON.parse(jsonQuery(QJ, '$.items[?(@.price < 10)].n', JSONPath)), ['a']);
+  assert.deepEqual(JSON.parse(jsonQuery(QJ, '$..n', JSONPath)), ['a', 'b']);
+  assert.equal(jsonQuery(QJ, '$.nope', JSONPath), '[]');
+});
+test('jsonQuery never runs code from a filter', () => {
+  globalThis.pwned = false;
+  try { jsonQuery(QJ, '$.items[?(globalThis.pwned = true)]', JSONPath); } catch { /* refusing is fine */ }
+  try { jsonQuery(QJ, '$.items[?(constructor.constructor("globalThis.pwned = true")())]', JSONPath); } catch { /* refusing is fine */ }
+  assert.equal(globalThis.pwned, false);
+  delete globalThis.pwned;
+});
+test('jsonQuery is empty for empty JSON or path', () => {
+  assert.equal(jsonQuery('', '$', JSONPath), '');
+  assert.equal(jsonQuery(QJ, ' ', JSONPath), '');
 });

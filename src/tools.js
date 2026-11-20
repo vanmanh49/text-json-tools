@@ -680,3 +680,11 @@ export function jsonToYaml(s, yaml) {
   if (!s.trim()) return '';
   return yaml.dump(JSON.parse(s), { lineWidth: -1, noRefs: true });
 }
+
+// `JSONPath` is jsonpath-plus's export, passed in so the page loads it only when the query tool is used.
+// eval: 'safe' runs filter expressions in the library's own interpreter, never eval/Function (older versions had a
+// code-execution hole there). Keep it explicit.
+export function jsonQuery(s, path, JSONPath) {
+  if (!s.trim() || !path.trim()) return '';
+  return JSON.stringify(JSONPath({ path, json: JSON.parse(s), eval: 'safe', wrap: true }), null, 2);
+}

@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import TransformTool, { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp, Regex, Csv, Yaml } from './TransformTool.jsx';
+import TransformTool, { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp, Regex, Csv, Yaml, Query } from './TransformTool.jsx';
 import { textStore } from '../textStore.js';
 import { SAMPLES } from '../samples.js';
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
   cleanup();
-  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in', 're-in', 'csv-in', 'ts-in', 'yaml-in']) textStore.set(id, '');
+  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in', 're-in', 'csv-in', 'ts-in', 'yaml-in', 'query-in']) textStore.set(id, '');
 });
 
 const err = c => c.querySelector('.err').textContent;
@@ -116,4 +116,11 @@ test('yaml converts once its tab is shown, in both directions', async () => {
   act(() => textStore.set('yaml-in', '{"b":[1]}'));
   fireEvent.change(container.querySelector('#yaml-dir'), { target: { value: 'json-to-yaml' } });
   await waitFor(() => expect(container.querySelector('#yaml-out').value).toBe('b:\n  - 1\n'));
+});
+
+test('json query runs the path on the input', async () => {
+  const { container } = render(<Query />);
+  act(() => textStore.set('query-in', '{"a":[{"b":1},{"b":2}]}'));
+  fireEvent.change(container.querySelector('#query-path'), { target: { value: '$.a[*].b' } });
+  await waitFor(() => expect(container.querySelector('#query-out').value).toBe('[\n  1,\n  2\n]'));
 });

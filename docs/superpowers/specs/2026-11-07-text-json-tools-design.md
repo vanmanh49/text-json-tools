@@ -12,7 +12,7 @@ A public, static website of browser-only utilities. The first five:
 3. **JSON Minify**: minify formatted JSON to one line.
 4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
 
-Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp, Hash, Regex Tester, JSON ⇄ CSV, JSON → TypeScript and YAML ⇄ JSON (seventeen tools in all).
+Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp, Hash, Regex Tester, JSON ⇄ CSV, JSON → TypeScript, YAML ⇄ JSON and JSON Query (eighteen tools in all).
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
 
@@ -24,7 +24,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 
 - Static files only. Built with Vite (`npm run build`). GitHub Actions deploys `dist/` to GitHub Pages on every push to `main`; `dist/` also works on any static host.
 - React 19 with plain CSS and JS (ES modules, JSX).
-- Runtime dependencies: React, React DOM, `jsdiff` (`diff@9.0.0`), `qrcode@1.5.4`, `jsqr@1.4.0` and `js-yaml@5.5.0` (loaded only when the YAML tool converts), installed
+- Runtime dependencies: React, React DOM, `jsdiff` (`diff@9.0.0`), `qrcode@1.5.4`, `jsqr@1.4.0`, `js-yaml@5.5.0` and `jsonpath-plus@11.3.0` (each of the last two loaded only when its tool runs), installed
   from npm and bundled into `dist/` by Vite, so the page loads no third-party
   script. The tests import the same `"diff"` from `node_modules`.
 - Works on desktop and phone widths, light and dark theme.
@@ -152,6 +152,10 @@ Empty input to the three JSON tools returns `''` without an error.
   - `jsonToYaml(s, yaml)` dumps with no line folding and no anchors.
   - `yaml` is the js-yaml module, passed in by the component, which imports it only when its tab is visible and has text, so it is its own chunk and never loads for other tools.
   - Known limits: comments are lost, `.inf`/`.nan` become `null`, and numbers above 2^53 lose precision as with `JSON.parse`.
+- **JSON Query (`#query`):** a Path box (`$` by default, not saved) over a JSON panel → Results panel.
+  - `jsonQuery(s, path, JSONPath)` runs jsonpath-plus with `wrap: true`, so the result is always a JSON array of every match (`[]` for none), pretty-printed. Empty JSON or path gives empty output; a bad path shows the library's message.
+  - Filters such as `?(@.price < 10)` run with `eval: 'safe'`, the library's own interpreter; nothing in a path is ever run as JavaScript. A test checks that a filter cannot run code.
+  - The library is its own chunk, imported only when the tab is visible and has text.
 - **Async tools:** a `TransformTool` function may return a promise. The output is empty until it settles, and a result for text that has since changed is dropped, so a slow old result never replaces a newer one. A rejection's message goes to the error line.
 - **Compare as JSON:** a checkbox in the Compare toolbar.
   - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.

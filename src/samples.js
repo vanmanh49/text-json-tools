@@ -26,6 +26,7 @@ export const SAMPLES = {
   'csv-in': JSON.stringify([{ name: 'Ann Nguyen', city: 'Hanoi', tags: ['dev', 'ops'], note: 'Likes "quotes", commas' }, { name: 'Bo Tran', city: 'Hue', zip: '007' }], null, 2),
   'ts-in': JSON.stringify({ ...PERSON, projects: [{ id: 1, name: 'Search', done: true }, { id: 2, name: 'Export', due: '2026-12-01' }] }, null, 2),
   'yaml-in': CONFIG_A,
+  'query-in': JSON.stringify({ ...PERSON, orders: [{ id: 1, item: 'Pen', price: 2.5 }, { id: 2, item: 'Lamp', price: 30 }, { id: 3, item: 'Ink', price: 8 }] }, null, 2),
   'qr-in': 'https://example.com/?name=Ann Nguyễn',
   left: { left: CONFIG_A, right: CONFIG_B },
   right: { left: CONFIG_A, right: CONFIG_B },

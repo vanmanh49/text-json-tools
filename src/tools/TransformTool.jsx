@@ -3,7 +3,7 @@ import Panel from '../ui/Panel.jsx';
 import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
 import { setText } from '../setText.js';
-import { CSV_DELIMS, HASH_ALGOS, LINE_OPS, base64Decode, csvToJson, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, jsonToCsv, jsonToTs, jsonToYaml, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode, yamlToJson } from '../tools.js';
+import { CSV_DELIMS, HASH_ALGOS, LINE_OPS, base64Decode, csvToJson, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, jsonToCsv, jsonToTs, jsonToYaml, htmlEscape, htmlUnescape, jsonToText, jsonQuery, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode, yamlToJson } from '../tools.js';
 
 // One input panel, one output panel, and the tool's function between them.
 export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
@@ -226,5 +226,20 @@ export function Yaml({ hidden }) {
   return (
     <TransformTool tab="yaml" hidden={hidden} desc="Convert YAML to JSON or JSON to YAML. Comments are not kept, and dates stay text."
       inId="yaml-in" inLabel={toJson ? 'YAML' : 'JSON'} inExt={toJson ? 'yaml' : 'json'} outId="yaml-out" outLabel={toJson ? 'JSON' : 'YAML'} outExt={toJson ? 'json' : 'yaml'} fn={fn} toolbar={toolbar} />
+  );
+}
+
+export function Query({ hidden }) {
+  const [path, setPath] = useState('$');
+  // jsonpath-plus is its own chunk, loaded only for a visible tab with text (see Yaml).
+  const fn = useCallback(s => (hidden || !s.trim() ? '' : import('jsonpath-plus').then(m => jsonQuery(s, path, m.JSONPath))), [path, hidden]);
+  const toolbar = (
+    <label className="inline">Path
+      <input type="text" id="query-path" className="code" spellCheck={false} autoComplete="off" value={path} onChange={e => setPath(e.target.value)} />
+    </label>
+  );
+  return (
+    <TransformTool tab="query" hidden={hidden} desc="Pick values out of JSON with a JSONPath query, such as $.tags[*], $..city or $.items[?(@.price < 10)]."
+      inId="query-in" inLabel="JSON" inExt="json" outId="query-out" outLabel="Results" outExt="json" fn={fn} toolbar={toolbar} />
   );
 }
