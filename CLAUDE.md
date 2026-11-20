@@ -23,7 +23,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
 
 - **File map** (all under `src/`):
   - `main.jsx` calls `installGlobalListeners()` and renders `App`.
-  - `App.jsx`: top bar, tabs, theme, settings menu (remember text, Clear all). Toggles `body.app` for every tool except Compare. That class makes the section fill the screen so its panels scroll inside; Compare scrolls the page because of its sticky toolbar and location bar. Focuses the first editable textarea of the tab when it opens.
+  - `App.jsx`: top bar, group menus and pinned tools, theme, settings menu (remember text, Clear all). Toggles `body.app` for every tool except Compare. That class makes the section fill the screen so its panels scroll inside; Compare scrolls the page because of its sticky toolbar and location bar. Focuses the first editable textarea of the tab when it opens.
   - `useHashTab.js`: `NAV`, the one list of tabs, menu labels and groups (`GROUPS`: JSON, Text, Encode, More; the top bar shows one menu per group), and the current tab from `location.hash` (unknown or empty → `format`).
   - `store.js`: the try/catch `store` helper around `localStorage`, `settings()`, `MAX_SAVE`.
   - `textStore.js`: the text of every editable panel, by textarea id (`EDITABLE_IDS`), with `useText(id)`, debounced saving and the "too large / not saved" notes.
@@ -64,7 +64,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - Don't toggle classes by hand on nodes whose `className` React renders from state (`.node`, `.change`, `.inputs`); the next render overwrites them. The only hand-toggled classes are `.dropping` on `.editor` and `.flashing` on a button, whose `className` never changes.
   - No `innerHTML` / `dangerouslySetInnerHTML`. User text is only ever a JSX text child or a DOM text node.
   - Every element id and class name matches the pre-React app; CSS and tests depend on them.
-- **Storage:** `tjt:settings` (`{ remember }`), `tjt:theme`, `tjt:text:<textarea id>`. Every access goes through `store`. An inline script in `index.html`'s `<head>` applies the theme before first paint. Ids in `PRIVATE_IDS` (the JWT, QR, Encode/Decode and Hash input boxes, rendered with `data-private`) are never written to storage, whatever the "remember" setting says, and any text an older version saved for them is deleted on load. Add any box that may hold secrets there.
+- **Storage:** `tjt:settings` (`{ remember }`), `tjt:theme`, `tjt:pins` (pinned tab ids, at most 6), `tjt:text:<textarea id>`. Every access goes through `store`. An inline script in `index.html`'s `<head>` applies the theme before first paint. Ids in `PRIVATE_IDS` (the JWT, QR, Encode/Decode and Hash input boxes, rendered with `data-private`) are never written to storage, whatever the "remember" setting says, and any text an older version saved for them is deleted on load. Add any box that may hold secrets there.
 - **Tests** (Vitest + jsdom + Testing Library, next to the code as `*.test.js(x)`):
   - jsdom has no `ResizeObserver` and no `scrollIntoView`. Tests that render Compare, search, or the whole `App` stub them: `vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })` and `Element.prototype.scrollIntoView = () => {}` (restore both in `afterEach`).
   - Reset the store in `afterEach` (`textStore.set(id, '')`), because it is module state shared by the tests in a file.

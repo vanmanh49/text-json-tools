@@ -14,6 +14,14 @@ const TOOLS = { format: FormatTool, compare: CompareTool, 'text-to-json': TextTo
 
 // Theme: System → Light → Dark. The initial value is applied by an inline script in <head>.
 const THEMES = ['system', 'light', 'dark'];
+// Pinned tools: tab ids in pin order, shown as tabs before the group menus. Saved like the theme.
+const MAX_PINS = 6;
+const loadPins = () => {
+  try {
+    const p = JSON.parse(store.get('tjt:pins') || '[]');
+    return Array.isArray(p) ? [...new Set(p)].filter(t => NAV.some(n => n[0] === t)).slice(0, MAX_PINS) : [];
+  } catch { return []; }
+};
 
 export default function App() {
   const tab = useHashTab();
@@ -21,6 +29,7 @@ export default function App() {
   const [confirming, setConfirming] = useState(false);
   const [showTop, setShowTop] = useState(false);
   const [remember] = useState(() => settings().remember);
+  const [pins, setPins] = useState(loadPins);
   const menu = useRef(null);
   const toolsMenu = useRef(null);
 
@@ -77,6 +86,23 @@ export default function App() {
     textStore.clearAll();
     menu.current.open = false;
   };
+  const togglePin = t => {
+    const next = pins.includes(t) ? pins.filter(p => p !== t) : [...pins, t];
+    store.set('tjt:pins', JSON.stringify(next));
+    setPins(next);
+  };
+  // One tool in a menu: its link, and a pin button beside it (a button inside <a> is invalid HTML).
+  const toolRow = ([t, name], close, key = t) => {
+    const pinned = pins.includes(t), full = !pinned && pins.length >= MAX_PINS;
+    return (
+      <div key={key} className="tool-row">
+        <a href={'#' + t} aria-current={tab === t ? 'page' : undefined} onClick={close}>{name}</a>
+        <button type="button" className="pin" aria-pressed={pinned} aria-label={`${pinned ? 'Unpin' : 'Pin'} ${name}`}
+          title={full ? `Unpin a tool first (${MAX_PINS} at most)` : pinned ? 'Unpin from the top bar' : 'Pin to the top bar'} disabled={full} onClick={() => togglePin(t)}>{pinned ? '★' : '☆'}</button>
+      </div>
+    );
+  };
+  const navOf = t => NAV.find(n => n[0] === t);
   const themeName = theme[0].toUpperCase() + theme.slice(1);
   const toolName = NAV.find(([t]) => t === tab)[1];
 
@@ -88,6 +114,11 @@ export default function App() {
             <span className="brand-name">Text &amp; JSON Tools</span>
           </a>
           <nav aria-label="Tools">
+            {pins.length > 0 && (
+              <div className="pins">
+                {pins.map(t => <a key={t} className="pinned" href={'#' + t} aria-current={tab === t ? 'page' : undefined}>{navOf(t)[1]}</a>)}
+              </div>
+            )}
             {GROUPS.map(g => {
               const tools = NAV.filter(n => n[2] === g);
               const here = tools.some(([t]) => t === tab);
@@ -95,7 +126,7 @@ export default function App() {
                 <details key={g} className="menu group">
                   <summary className={here ? 'current' : undefined}>{here ? toolName : g}</summary>
                   <div className="menu-body tool-list">
-                    {tools.map(([t, name]) => <a key={t} href={'#' + t} aria-current={tab === t ? 'page' : undefined} onClick={e => { e.currentTarget.closest('details').open = false; }}>{name}</a>)}
+                    {tools.map(n => toolRow(n, e => { e.currentTarget.closest('details').open = false; }))}
                   </div>
                 </details>
               );
@@ -105,9 +136,13 @@ export default function App() {
           <details className="menu tools-menu" ref={toolsMenu}>
             <summary aria-label={`Tool: ${toolName}. Choose a tool`}>{toolName}</summary>
             <div className="menu-body tool-list">
+              {pins.length > 0 && [
+                <p key="pinned" className="tool-group">Pinned</p>,
+                ...pins.map(t => toolRow(navOf(t), () => { toolsMenu.current.open = false; }, 'pin-' + t)),
+              ]}
               {GROUPS.map(g => [
                 <p key={g} className="tool-group">{g}</p>,
-                ...NAV.filter(n => n[2] === g).map(([t, name]) => <a key={t} href={'#' + t} aria-current={tab === t ? 'page' : undefined} onClick={() => { toolsMenu.current.open = false; }}>{name}</a>),
+                ...NAV.filter(n => n[2] === g).map(n => toolRow(n, () => { toolsMenu.current.open = false; })),
               ])}
             </div>
           </details>

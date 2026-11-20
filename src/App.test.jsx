@@ -100,3 +100,39 @@ test('tool picker lists tools under group headings', () => {
   const { container } = render(<App />);
   expect([...container.querySelectorAll('.tools-menu .tool-group')].map(p => p.textContent)).toEqual(GROUPS);
 });
+
+const pinnedHrefs = c => [...c.querySelectorAll('nav a.pinned')].map(a => a.getAttribute('href'));
+
+test('pinning a tool adds a tab and saves it', () => {
+  const { container } = render(<App />);
+  fireEvent.click(container.querySelector('nav button[aria-label="Pin UUID"]'));
+  expect(pinnedHrefs(container)).toEqual(['#uuid']);
+  expect(localStorage.getItem('tjt:pins')).toBe('["uuid"]');
+  const btn = container.querySelector('nav button[aria-label="Unpin UUID"]');
+  expect(btn.getAttribute('aria-pressed')).toBe('true');
+  fireEvent.click(btn);
+  expect(pinnedHrefs(container)).toEqual([]);
+  expect(localStorage.getItem('tjt:pins')).toBe('[]');
+});
+
+test('pins load from storage in order, dropping unknown ids', () => {
+  localStorage.setItem('tjt:pins', '["qr","nope","format"]');
+  const { container } = render(<App />);
+  expect(pinnedHrefs(container)).toEqual(['#qr', '#format']);
+  expect(container.querySelector('.tools-menu .tool-group').textContent).toBe('Pinned');
+  expect(container.querySelector('.tools-menu .tool-list a').getAttribute('href')).toBe('#qr');
+});
+
+test('a seventh pin is disabled', () => {
+  localStorage.setItem('tjt:pins', JSON.stringify(NAV.slice(0, 6).map(n => n[0])));
+  const { container } = render(<App />);
+  const free = [...container.querySelectorAll('button.pin[aria-pressed="false"]')];
+  expect(free.length).toBeGreaterThan(0);
+  expect(free.every(b => b.disabled)).toBe(true);
+});
+
+test('broken pin storage is ignored', () => {
+  localStorage.setItem('tjt:pins', '{oops');
+  const { container } = render(<App />);
+  expect(pinnedHrefs(container)).toEqual([]);
+});

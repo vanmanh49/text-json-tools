@@ -85,7 +85,18 @@ nav summary {
 }
 nav summary:hover, nav details[open] > summary { color: var(--text); }
 nav summary.current { background-color: var(--panel); color: var(--text); font-weight: 600; box-shadow: 0 0 0 1px var(--border); }
-nav .tool-list { width: 230px; }
+nav .tool-list { width: 250px; }
+nav { min-width: 0; }
+/* Pinned tools: plain tabs before the group menus; they scroll sideways rather than push the menus off. */
+.pins { display: flex; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; padding-right: 4px; margin-right: 2px; border-right: 1px solid var(--border); }
+nav a.pinned { padding: 5px 12px; border-radius: 6px; color: var(--muted); text-decoration: none; white-space: nowrap; font-size: 0.875rem; }
+nav a.pinned:hover { color: var(--text); }
+nav a.pinned[aria-current="page"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: 0 0 0 1px var(--border); }
+.tool-row { display: flex; align-items: center; gap: 2px; }
+.tool-row a { flex: 1; min-width: 0; }
+.pin { flex: none; padding: 6px 9px; font-size: 1rem; line-height: 1; border-color: transparent; background: transparent; color: var(--muted); }
+.pin:hover:not(:disabled) { color: var(--text); background: var(--hover); }
+.pin[aria-pressed="true"] { color: var(--accent); }
 .top-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
 .menu { position: relative; }
 .menu summary { list-style: none; }
@@ -111,7 +122,7 @@ nav .tool-list { width: 230px; }
 .tools-menu summary:hover { background-color: var(--hover); }
 .tools-menu[open] summary { border-color: var(--accent); }
 .tool-list { left: 0; right: auto; width: max(100%, 230px); gap: 2px; padding: 6px; max-height: calc(100vh - 80px); overflow-y: auto; }
-.tool-list a { padding: 9px 12px; border-radius: 6px; color: var(--text); text-decoration: none; font-size: 0.9rem; }
+.tool-list a { display: block; padding: 9px 12px; border-radius: 6px; color: var(--text); text-decoration: none; font-size: 0.9rem; }
 .tool-list a:hover { background: var(--hover); }
 .tool-list a[aria-current="page"] { background: var(--accent); color: var(--accent-text); font-weight: 600; }
 .tool-group { margin: 6px 12px 2px; color: var(--muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -345,8 +356,9 @@ body.app .pretty { min-height: 0; }
 .pretty .node.collapsed > .kids, .pretty .node.collapsed > .line:last-child { display: none; }
 .pretty .node.collapsed > .line:first-child .summary { display: inline; }
 
-/* Tablets: panel buttons show icons only so two panels fit side by side. */
+/* Tablets: panel buttons show icons only so two panels fit side by side; the brand name and theme text make room for pinned tools. */
 @media (max-width: 1250px) {
+  .brand-name, #theme .label { display: none; }
   .panel-head .icon-btn .label { display: none; }
   .panel-head .icon-btn.flashing .label { display: inline; }
 }
