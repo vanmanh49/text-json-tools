@@ -637,3 +637,17 @@ test('jsonQuery is empty for empty JSON or path', () => {
   assert.equal(jsonQuery('', '$', JSONPath), '');
   assert.equal(jsonQuery(QJ, ' ', JSONPath), '');
 });
+test('describeTime reads a date with no time as local midnight, as it says', () => {
+  const tz = process.env.TZ;
+  process.env.TZ = 'Asia/Ho_Chi_Minh'; // UTC+7, so UTC and local midnight differ
+  try {
+    for (const d of ['2024-01-01', '2024-01-01T00:00']) {
+      assert.match(describeTime(d), /^ISO 8601      2023-12-31T17:00:00\.000Z$/m, d);
+      assert.match(describeTime(d), /^Read as       date text \(local time/m);
+    }
+    assert.match(describeTime('2024-01'), /^ISO 8601      2023-12-31T17:00:00\.000Z$/m);
+    assert.match(describeTime('2024-01-01T00:00Z'), /^ISO 8601      2024-01-01T00:00:00\.000Z$/m);
+  } finally {
+    if (tz === undefined) delete process.env.TZ; else process.env.TZ = tz;
+  }
+});

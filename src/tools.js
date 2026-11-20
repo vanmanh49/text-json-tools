@@ -492,7 +492,8 @@ export function describeTime(s, now = Date.now()) {
     ms = n * perUnit;
     read = 'Unix ' + unit;
   } else {
-    ms = Date.parse(t);
+    // Date.parse reads a date-only ISO string (2024-01-01) as UTC but a date-time as local; make both local, as Read as says.
+    ms = Date.parse(/^\d{4}-\d\d(-\d\d)?$/.test(t) ? t + (t.length === 7 ? '-01' : '') + 'T00:00' : t);
     read = 'date text (local time unless it names a zone)';
   }
   const date = new Date(ms);
