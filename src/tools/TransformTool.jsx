@@ -5,13 +5,16 @@ import { useText } from '../textStore.js';
 import { setText } from '../setText.js';
 import { CSV_DELIMS, HASH_ALGOS, LINE_OPS, base64Decode, csvToJson, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, jsonToCsv, jsonToTs, jsonToYaml, htmlEscape, htmlUnescape, jsonToText, jsonQuery, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode, yamlToJson } from '../tools.js';
 
+// JSON.parse's SyntaxError names JSON in every browser ("…is not valid JSON", "JSON.parse: …", "JSON Parse error: …").
+const failed = e => ({ out: '', error: e.message, jsonSyntax: e instanceof SyntaxError && /JSON/.test(e.message) });
+
 // One input panel, one output panel, and the tool's function between them.
 export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
   const input = useText(inId);
   const section = useRef(null);
   const [panelErr, setPanelErr] = useState(''); // clipboard, drop and fix messages from the panels
   const sync = useMemo(() => {
-    try { return { out: fn(input), error: '' }; } catch (e) { return { out: '', error: e.message }; }
+    try { return { out: fn(input), error: '' }; } catch (e) { return failed(e); }
   }, [fn, input]);
   // An async fn returns a promise: show its result only while it is still the latest one.
   const promise = typeof sync.out?.then === 'function' ? sync.out : null;
@@ -19,13 +22,14 @@ export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt,
   useEffect(() => {
     if (!promise) return;
     let live = true;
-    promise.then(out => live && setSettled({ promise, out, error: '' }), e => live && setSettled({ promise, out: '', error: e.message }));
+    promise.then(out => live && setSettled({ promise, out, error: '' }), e => live && setSettled({ promise, ...failed(e) }));
     return () => { live = false; };
   }, [promise]);
   const result = !promise ? sync : settled?.promise === promise ? settled : { out: '', error: '' };
   useEffect(() => setPanelErr(''), [input]);
-  // JSON input panels show parse errors (with line and column) in their status bar instead.
-  const error = inExt === 'json' ? '' : result.error;
+  // JSON input panels show parse errors (with line and column) in their status bar instead; other errors
+  // (an item CSV can't hold, a bad query path) still go to the err line.
+  const error = inExt === 'json' && result.jsonSyntax ? '' : result.error;
   return (
     <section data-tab={tab} hidden={hidden} ref={section}>
       <p className="desc">{desc}</p>

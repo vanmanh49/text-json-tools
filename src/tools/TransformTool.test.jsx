@@ -124,3 +124,16 @@ test('json query runs the path on the input', async () => {
   fireEvent.change(container.querySelector('#query-path'), { target: { value: '$.a[*].b' } });
   await waitFor(() => expect(container.querySelector('#query-out').value).toBe('[\n  1,\n  2\n]'));
 });
+
+test('json-input tools show errors that are not JSON syntax errors', async () => {
+  const { container } = render(<Csv />);
+  act(() => textStore.set('csv-in', '[{"a":1},2]'));
+  expect(err(container)).toBe('Each item must be an object (item 2 is a number).');
+  act(() => textStore.set('csv-in', '[{"a":'));
+  expect(err(container)).toBe(''); // the status bar explains a parse error
+  cleanup();
+  const q = render(<Query />).container;
+  act(() => textStore.set('query-in', '{"a":[1]}'));
+  fireEvent.change(q.querySelector('#query-path'), { target: { value: '$.a[?(@ <)]' } });
+  await waitFor(() => expect(err(q)).toBe('Expected expression after < at character 6'));
+});
