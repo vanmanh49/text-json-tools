@@ -136,3 +136,11 @@ test('broken pin storage is ignored', () => {
   const { container } = render(<App />);
   expect(pinnedHrefs(container)).toEqual([]);
 });
+
+test('pinned tabs show a pin icon hidden from screen readers', () => {
+  localStorage.setItem('tjt:pins', '["uuid"]');
+  const { container } = render(<App />);
+  const tab = container.querySelector('nav a.pinned');
+  expect(tab.querySelector('svg.pin-icon[aria-hidden="true"]')).not.toBeNull();
+  expect(tab.textContent).toBe('UUID');
+});

@@ -89,8 +89,10 @@ nav .tool-list { width: 250px; }
 nav { min-width: 0; }
 /* Pinned tools: plain tabs before the group menus; they scroll sideways rather than push the menus off. */
 .pins { display: flex; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; padding-right: 4px; margin-right: 2px; border-right: 1px solid var(--border); }
-nav a.pinned { padding: 5px 12px; border-radius: 6px; color: var(--muted); text-decoration: none; white-space: nowrap; font-size: 0.875rem; }
+nav a.pinned { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 6px; color: var(--muted); text-decoration: none; white-space: nowrap; font-size: 0.875rem; }
 nav a.pinned:hover { color: var(--text); }
+nav a.pinned .pin-icon { flex: none; transform: rotate(30deg); opacity: 0.7; }
+nav a.pinned[aria-current="page"] .pin-icon { color: var(--accent); opacity: 1; }
 nav a.pinned[aria-current="page"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: 0 0 0 1px var(--border); }
 .tool-row { display: flex; align-items: center; gap: 2px; }
 .tool-row a { flex: 1; min-width: 0; }

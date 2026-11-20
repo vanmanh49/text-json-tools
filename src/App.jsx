@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { store, settings } from './store.js';
 import { textStore } from './textStore.js';
 import { GROUPS, NAV, useHashTab } from './useHashTab.js';
-import { IconButton } from './ui/IconButton.jsx';
+import { Icon, IconButton } from './ui/IconButton.jsx';
 import { TextToJson, JsonToText, Minify, Jwt, Encode, Lines, Timestamp, Hash, Regex, Csv, JsonToTs, Yaml, Query } from './tools/TransformTool.jsx';
 import FormatTool from './tools/FormatTool.jsx';
 import CompareTool from './tools/CompareTool.jsx';
@@ -116,7 +116,7 @@ export default function App() {
           <nav aria-label="Tools">
             {pins.length > 0 && (
               <div className="pins">
-                {pins.map(t => <a key={t} className="pinned" href={'#' + t} aria-current={tab === t ? 'page' : undefined}>{navOf(t)[1]}</a>)}
+                {pins.map(t => <a key={t} className="pinned" href={'#' + t} aria-current={tab === t ? 'page' : undefined}><Icon name="pin" size={13} className="pin-icon" />{navOf(t)[1]}</a>)}
               </div>
             )}
             {GROUPS.map(g => {

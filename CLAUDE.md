@@ -30,7 +30,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - `setText.js`: replaces a textarea's text so Cmd/Ctrl+Z can undo it.
   - `globals.js`: page-wide listeners (drop guard, Ctrl/⌘+F, `beforeinput` undo guard, undo/redo of directly set text, paste).
   - `samples.js`: "Try a sample" text per textarea id.
-  - `ui/IconButton.jsx`: `IconButton` and the static `ICONS` map; `flash()` for "Copied".
+  - `ui/IconButton.jsx`: `IconButton`, `Icon` (a decorative `aria-hidden` svg) and the static `ICONS` map; `flash()` for "Copied".
   - `ui/Panel.jsx`: one panel: header buttons (Copy, Paste, Clear, Download, Send to), `.editor` with the textarea (or the Pretty view as `children`), empty state, file drop, `StatusBar`. Exports `fileDrop(onFile)`, the drag-and-drop handlers also used by the QR image area.
   - `ui/StatusBar.jsx`: lines, size, JSON validity, Go to error, Fix JSON.
   - `ui/SearchBox.jsx`: the search box and its toggles.
