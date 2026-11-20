@@ -4,13 +4,15 @@ Date: 2026-11-07
 
 ## Goal
 
-A public, static website with five browser-only utilities:
+A public, static website of browser-only utilities. The first five:
 
 0. **JSON Format**: a Postman-style pretty view with syntax colours, line numbers, folding, indent choice, key sorting and search.
 1. **Text → JSON** — unescape a JSON string literal into pretty JSON.
 2. **JSON → text** — escape JSON into a single string literal.
 3. **JSON Minify**: minify formatted JSON to one line.
 4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
+
+Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code and UUID (ten tools in all).
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
 
@@ -44,7 +46,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 | `package.json` | `"type": "module"`, dependencies `react`, `react-dom`, `diff@9.0.0`; scripts `dev`, `build`, `preview`, `"test": "vitest run"` |
 | `.github/workflows/deploy.yml` | On push to `main`: tests, build, publish `dist/` to GitHub Pages |
 
-The active tab comes from the URL hash: `#format`, `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#jwt`, `#encode`, `#qr`, `#uuid`.
+The active tab comes from the URL hash: `#format`, `#compare`, `#text-to-json`, `#json-to-text`, `#minify`, `#html`, `#jwt`, `#encode`, `#qr`, `#uuid`.
 An empty or unknown hash shows `#format`.
 
 ## Functions (`tools.js`)
@@ -110,6 +112,10 @@ Empty input to the three JSON tools returns `''` without an error.
   - Typing makes the QR code as you go: `qrSvg` (UTF-8, error correction M, 4-module quiet zone), always black on white. Download saves a 1024 px PNG. Too much text (over about 2.3 KB) gets the library's "too big" error.
   - To read a QR code, drop an image on the QR panel, open one with **Open image**, or press Ctrl/⌘+V with an image (and no text) on the clipboard. The image is scaled to at most 1600 px, drawn on white, and read with `jsQR`, which is loaded only then. The text goes into the Text panel. No code found gives a clear error.
   - The Text box has `data-private` (it may hold Wi-Fi passwords or 2FA secrets), so it is never written to browser storage.
+- **HTML Format (`#html`):** an HTML panel, and a Show picker for the right panel: Formatted HTML or Preview.
+  - `formatHtml(s)` puts each tag, comment and text run on its own line, two spaces per open element. Void and `/>` tags don't indent. `<p>Short text</p>` (up to 100 characters) and empty elements stay on one line. Tag whitespace collapses to single spaces, quoted attribute values are kept. As in browsers, a quote starts a value only right after `=`, so `alt=don't` doesn't swallow the markup after it. `<pre>` and `<textarea>` contents are kept byte for byte; `<script>` and `<style>` contents are dedented and re-indented. Unclosed tags close when an ancestor closes; stray close tags are printed as they are. It never throws, and formatting its own output changes nothing.
+  - Known limits: splitting inline elements onto lines can add a space between them when rendered (`<b>a</b><i>b</i>`), and unclosed `<li>`/`<p>` nest deeper instead of closing at the next sibling.
+  - Preview: `<iframe sandbox="">` (no scripts, forms, popups or access to the page) with `srcDoc = htmlPreview(input)`, which inserts, after any doctype, a CSP meta allowing only inline styles and `data:`/`blob:` images and fonts, and `<base target="_blank">` so links open nothing. The formatted text and the preview update 150 ms after typing stops. White background whatever the theme.
 - **UUID (`#uuid`):** a Version picker, a Count box (1–1000) and **Generate** above one read-only UUIDs panel.
   - `uuids(count, version)` makes RFC 9562 UUIDs, one per line, from `crypto.getRandomValues` (`crypto.randomUUID` is missing on plain-http pages). A new version, a new count or Generate makes a new set; a bad count gets a clear error.
   - v4: random. v7: 48-bit Unix ms then random; a batch is sorted so it ascends. v1 and v6: 100 ns ticks since 1582-10-15, one tick apart within a batch, a random clock sequence and a random node with the multicast bit set (never the MAC address). v6 is v1 with the time fields reordered so it sorts.

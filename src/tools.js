@@ -353,3 +353,64 @@ export function uuids(count, version = 4, now = Date.now()) {
   // A v7 batch shares one millisecond; sorting makes it ascend like a counter would.
   return (version === 7 ? out.sort() : out).join('\n');
 }
+
+const VOID_TAGS = new Set('area base br col embed hr img input link meta param source track wbr'.split(' '));
+const RAW_TAGS = new Set(['script', 'style', 'pre', 'textarea']); // their contents are not HTML: never split into tags
+// comment | doctype or <?xml?> | tag | text | a stray "<" and the text after it.
+// As in browsers, a quote starts a value only right after "=" (so `alt=don't` is plain text); quoted values may hold ">" and "<".
+// Each part of a tag matches one way only, and an unquoted "<" ends it, so a tag that never closes fails fast.
+const HTML_TOKEN = /<!--[\s\S]*?(?:-->|$)|<[!?][^>]*>?|<(\/?)([a-zA-Z][\w:.-]*)(?:[^<>"'=]|=\s*"[^"]*"|=\s*'[^']*'|=(?!\s*["'])|(?<!=\s*)["'])*>|[^<]+|<[^<]*/g;
+
+// Indent HTML two spaces per level. Contents of <pre> and <textarea> are kept exactly; <script> and <style> are re-indented.
+// shortcut: every tag and text run gets its own line, so `<b>a</b><i>b</i>` renders with a space between
+// them, and unclosed <li>/<p> nest one level deeper each until their parent closes; use a real parser if users hit it.
+export function formatHtml(s) {
+  if (!s.trim()) return '';
+  const out = [], open = []; // open: [tag name, index of its line in out]
+  const pad = () => '  '.repeat(open.length);
+  const re = new RegExp(HTML_TOKEN);
+  let m;
+  while ((m = re.exec(s))) {
+    const [tok, close, name] = m;
+    if (!name) {
+      const t = /^<[!?]/.test(tok) ? tok.trim() : tok.replace(/\s+/g, ' ').trim();
+      if (t) out.push(pad() + t);
+      continue;
+    }
+    const tag = name.toLowerCase();
+    const text = tok.replace(/\s*=\s*("[^"]*"|'[^']*')|\s+/g, (_, q) => (q ? '=' + q : ' ')); // one line; quoted values kept as they are
+    if (close) {
+      const at = open.findLastIndex(([n]) => n === tag);
+      if (at < 0) { out.push(pad() + text); continue; } // stray close tag
+      const line = open[at][1];
+      open.length = at;
+      const body = out.slice(line + 1);
+      // <div></div> and <p>Short text</p> stay on one line.
+      if (!body.length) out[line] += text;
+      else if (body.length === 1 && !/^\s*</.test(body[0]) && out[line].length + body[0].trim().length + text.length <= 100) out.splice(line, 2, out[line] + body[0].trim() + text);
+      else out.push(pad() + text);
+      continue;
+    }
+    out.push(pad() + text);
+    if (VOID_TAGS.has(tag) || text.endsWith('/>')) continue;
+    open.push([tag, out.length - 1]);
+    if (!RAW_TAGS.has(tag)) continue;
+    const closeTag = new RegExp('</' + tag, 'ig'); // not s.toLowerCase(): it can change the length ('İ'), so positions would drift
+    closeTag.lastIndex = re.lastIndex;
+    const end = closeTag.exec(s)?.index ?? s.length;
+    const inner = s.slice(re.lastIndex, end);
+    re.lastIndex = end;
+    if (tag === 'pre' || tag === 'textarea') out[out.length - 1] += inner; // whitespace there is content
+    else if (inner.trim()) {
+      const lines = inner.replace(/^\s*\n|\s+$/g, '').split('\n');
+      const cut = Math.min(...lines.filter(l => l.trim()).map(l => l.match(/^\s*/)[0].length));
+      out.push(...lines.map(l => (l.trim() ? pad() + l.slice(cut) : '')));
+    }
+  }
+  return out.join('\n');
+}
+
+// The preview's document: no network (so pasted email HTML can't call home) and links can't open anything.
+// The iframe's empty sandbox already stops scripts, forms and popups.
+const PREVIEW_HEAD = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data: blob:; font-src data:"><base target="_blank">';
+export const htmlPreview = s => s.replace(/^\s*(<!doctype[^>]*>)?/i, '$1' + PREVIEW_HEAD);

@@ -12,6 +12,7 @@ const SEND_TO = [ // [label, tab, textarea id]
   ['Minify', 'minify', 'min-in'],
   ['Text → JSON', 'text-to-json', 't2j-in'],
   ['JSON → Text', 'json-to-text', 'j2t-in'],
+  ['HTML Format', 'html', 'html-in'],
   ['Compare (left)', 'compare', 'left'],
   ['Compare (right)', 'compare', 'right'],
   ['Encode / Decode', 'encode', 'enc-in'],
