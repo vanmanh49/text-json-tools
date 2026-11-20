@@ -9,7 +9,7 @@ import { CSV_DELIMS, HASH_ALGOS, LINE_OPS, base64Decode, csvToJson, base64Encode
 const failed = e => ({ out: '', error: e.message, jsonSyntax: e instanceof SyntaxError && /JSON/.test(e.message) });
 
 // One input panel, one output panel, and the tool's function between them.
-export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
+export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below, chain }) {
   const input = useText(inId);
   const section = useRef(null);
   const [panelErr, setPanelErr] = useState(''); // clipboard, drop and fix messages from the panels
@@ -36,7 +36,7 @@ export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt,
       <div className="toolbar">{toolbar}<SearchBox sectionRef={section} version={result.out} hidden={hidden} /></div>
       <div className="io">
         <Panel id={inId} label={inLabel} ext={inExt} tab={tab} className="in" onErr={setPanelErr} />
-        <Panel id={outId} label={outLabel} ext={outExt} tab={tab} className="out" readOnly value={result.out} />
+        <Panel id={outId} label={outLabel} ext={outExt} tab={tab} className="out" readOnly value={result.out} useAsInput={chain ? inId : undefined} />
       </div>
       {below}
       <p className="err" role="alert">{error || panelErr}</p>
@@ -124,7 +124,7 @@ export function Lines({ hidden }) {
   );
   return (
     <TransformTool tab="lines" hidden={hidden} desc="Sort, dedupe, trim or change the case of lines."
-      inId="lines-in" inLabel="Lines" inExt="txt" outId="lines-out" outLabel="Result" outExt="txt" fn={fn} toolbar={toolbar} />
+      inId="lines-in" inLabel="Lines" inExt="txt" outId="lines-out" outLabel="Result" outExt="txt" fn={fn} toolbar={toolbar} chain />
   );
 }
 

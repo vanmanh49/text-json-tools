@@ -31,7 +31,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - `globals.js`: page-wide listeners (drop guard, Ctrl/⌘+F, `beforeinput` undo guard, undo/redo of directly set text, paste).
   - `samples.js`: "Try a sample" text per textarea id.
   - `ui/IconButton.jsx`: `IconButton`, `Icon` (a decorative `aria-hidden` svg) and the static `ICONS` map; `flash()` for "Copied".
-  - `ui/Panel.jsx`: one panel: header buttons (Copy, Paste, Clear, Download, Send to), `.editor` with the textarea (or the Pretty view as `children`), empty state, file drop, `StatusBar`. Exports `fileDrop(onFile)`, the drag-and-drop handlers also used by the QR image area.
+  - `ui/Panel.jsx`: one panel: header buttons (Copy, Paste, Clear, Download, Send to, and Use as input when given `useAsInput`; `TransformTool` passes it for `chain` tools such as Line Tools), `.editor` with the textarea (or the Pretty view as `children`), empty state, file drop, `StatusBar`. Exports `fileDrop(onFile)`, the drag-and-drop handlers also used by the QR image area.
   - `ui/StatusBar.jsx`: lines, size, JSON validity, Go to error, Fix JSON.
   - `ui/SearchBox.jsx`: the search box and its toggles.
   - `tools/TransformTool.jsx`: Text → JSON, JSON → Text, Minify, JWT, Encode/Decode, Line Tools, Timestamp, Hash, Regex Tester, JSON ⇄ CSV, JSON → TypeScript, YAML ⇄ JSON and JSON Query, all one input panel → function → output panel. The function may return a promise; a result for text that has since changed is dropped.

@@ -44,7 +44,8 @@ function download(text, name) {
 }
 
 // Editable: text lives in the store (`id`). Read-only or with `children` (Pretty view): `value` is the text.
-export default function Panel({ id, label, labelId, ext, tab, readOnly, value, className, onErr, children }) {
+// useAsInput: a read-only panel's button that moves its text into that textarea id (chaining, e.g. Line Tools).
+export default function Panel({ id, label, labelId, ext, tab, readOnly, value, className, onErr, useAsInput, children }) {
   const stored = useText(id);
   const ta = useRef(null);
   const editable = !readOnly && !children;
@@ -95,6 +96,7 @@ export default function Panel({ id, label, labelId, ext, tab, readOnly, value, c
               {SEND_TO.filter(([, t]) => t !== tab).map(([l, t, i]) => <option key={l} value={`${t}|${i}`}>{l}</option>)}
             </select>
           )}
+          {useAsInput && !editable && <IconButton icon="use-input" label="Use as input" disabled={empty} onClick={() => setText(useAsInput, text)} />}
           <IconButton icon="copy" label="Copy" disabled={empty} onClick={copy} />
           {editable && <IconButton icon="paste" label="Paste" onClick={paste} />}
           {editable && <IconButton icon="clear" label="Clear" disabled={empty} onClick={() => setText(id, '')} />}

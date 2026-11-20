@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import TransformTool, { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp, Regex, Csv, Yaml, Query } from './TransformTool.jsx';
+import TransformTool, { Lines, TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp, Regex, Csv, Yaml, Query } from './TransformTool.jsx';
 import { textStore } from '../textStore.js';
 import { SAMPLES } from '../samples.js';
 
@@ -136,4 +136,16 @@ test('json-input tools show errors that are not JSON syntax errors', async () =>
   act(() => textStore.set('query-in', '{"a":[1]}'));
   fireEvent.change(q.querySelector('#query-path'), { target: { value: '$.a[?(@ <)]' } });
   await waitFor(() => expect(err(q)).toBe('Expected expression after < at character 6'));
+});
+
+test('line tools can use the result as the next input', () => {
+  const { container } = render(<Lines />);
+  const use = () => container.querySelector('.panel:last-child button[aria-label="Use as input"]');
+  expect(use().disabled).toBe(true);
+  act(() => textStore.set('lines-in', 'b\na\nb'));
+  act(() => fireEvent.click(use()));
+  expect(textStore.get('lines-in')).toBe('a\nb\nb');
+  fireEvent.change(container.querySelector('#lines-mode'), { target: { value: 'unique' } });
+  expect(container.querySelector('#lines-out').value).toBe('a\nb');
+  expect(container.querySelector('.in').closest('.panel').querySelector('button[aria-label="Use as input"]')).toBeNull();
 });
