@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A static, browser-only website with nine tools: JSON Format (Postman-style pretty view), Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right), Text → JSON (unescape), JSON → Text (escape), JSON Minify, JWT Decode, Encode/Decode (Base64, URL), QR Code (text ⇄ QR image), and UUID (v1, v4, v6, v7 generator). No backend. Built with Vite and React 19; the output in `dist/` is plain static files. The design spec and plans are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
+A static, browser-only website with ten tools: JSON Format (Postman-style pretty view), Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right), Text → JSON (unescape), JSON → Text (escape), JSON Minify, HTML Format (indent, or preview in a sandboxed frame), JWT Decode, Encode/Decode (Base64, URL), QR Code (text ⇄ QR image), and UUID (v1, v4, v6, v7 generator). No backend. Built with Vite and React 19; the output in `dist/` is plain static files. The design spec and plans are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
 
 ## Commands
 
@@ -37,8 +37,9 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - `tools/TransformTool.jsx`: Text → JSON, JSON → Text, Minify, JWT and Encode/Decode, all one input panel → function → output panel.
   - `tools/FormatTool.jsx`, `tools/CompareTool.jsx`: the two bigger tools.
   - `tools/QrTool.jsx`: QR Code. Text panel → `qrSvg` image; an image dropped on the QR panel, opened, or pasted (image and no text on the clipboard) is decoded with a lazily imported `jsqr` (its own chunk) into the Text panel. jsdom has no canvas, so decoding is tested in `tools.test.js` by rasterising `qrSvg` output, and in a real browser.
+  - `tools/HtmlTool.jsx`: HTML Format. HTML panel → `formatHtml` output, or (Show: Preview) an `<iframe sandbox="">` whose `srcDoc` is `htmlPreview(text)`. Both use the text debounced 150 ms: formatting a few MB takes ~100 ms and every change reloads the frame. `sandbox=""` stops scripts, forms and popups; `htmlPreview` adds a CSP meta that blocks all network loads (tracking pixels in pasted email) and `<base target="_blank">`. Keep both.
   - `tools/UuidTool.jsx`: UUID. Version + Count + Generate toolbar over one read-only panel (`.io.single`), filled by `uuids`.
-  - `tools.js` holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `splitSame`, `jsonLines`, `linesText`, `normalizeJson`, `decodeJwt`, `jwtTimeNotes`, `base64Encode`/`base64Decode`, `urlEncode`/`urlDecode`, `jsonStatus`/`errorLocation`, `repairJson` (the status bar's Fix JSON), `qrSvg`, `uuids`, `findAll`, `formatSize`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
+  - `tools.js` holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `splitSame`, `jsonLines`, `linesText`, `normalizeJson`, `decodeJwt`, `jwtTimeNotes`, `base64Encode`/`base64Decode`, `urlEncode`/`urlDecode`, `jsonStatus`/`errorLocation`, `repairJson` (the status bar's Fix JSON), `formatHtml`/`htmlPreview`, `qrSvg`, `uuids`, `findAll`, `formatSize`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
 - **Text goes through `textStore`.**
   - Editable textareas are controlled: their value is `useText(id)` and `onChange` calls `textStore.set`.
   - Never `t.value = …` plus a synthetic input event: React ignores it, so go through `textStore.set`.

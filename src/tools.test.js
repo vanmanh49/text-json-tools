@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview } from './tools.js';
 import jsQR from 'jsqr';
 
 test('textToJson unescapes a quoted string', () => {
@@ -373,4 +373,43 @@ test('uuids v1 and v6 hold the 100 ns timestamp since 1582', () => {
 });
 test('uuids rejects an unsupported version', () => {
   for (const v of [2, 3, 5, 8]) assert.throws(() => uuids(1, v), /not supported/);
+});
+
+test('formatHtml indents nested tags and keeps short elements on one line', () => {
+  const src = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Hi</title></head><body><div   class="a"\n id=b><p>Hello <b>world</b></p><br><img src="a.png" alt="x > y"/><div></div></div></body></html>';
+  assert.equal(formatHtml(src), [
+    '<!DOCTYPE html>', '<html>', '  <head>', '    <meta charset="utf-8">', '    <title>Hi</title>', '  </head>', '  <body>',
+    '    <div class="a" id=b>', '      <p>', '        Hello', '        <b>world</b>', '      </p>', '      <br>',
+    '      <img src="a.png" alt="x > y"/>', '      <div></div>', '    </div>', '  </body>', '</html>',
+  ].join('\n'));
+});
+
+test('formatHtml keeps pre exactly, re-indents script, and is stable', () => {
+  const src = '<div><pre>  a\n    b </pre><script>\n        if (a < b) {\n          go();\n        }\n</script><!-- note --></div>';
+  const out = formatHtml(src);
+  assert.equal(out, '<div>\n  <pre>  a\n    b </pre>\n  <script>\n    if (a < b) {\n      go();\n    }\n  </script>\n  <!-- note -->\n</div>');
+  assert.equal(formatHtml(out), out);
+});
+
+test('formatHtml copes with broken HTML', () => {
+  assert.equal(formatHtml('  \n '), '');
+  assert.equal(formatHtml('a < b</span><ul><li>x<li>y</ul>'), 'a\n< b\n</span>\n<ul>\n  <li>\n    x\n    <li>\n      y\n</ul>');
+  assert.equal(formatHtml('<script>x'), '<script>\n  x');
+  // lowercasing 'İ' adds a character; the close tag must still be found in the right place
+  assert.equal(formatHtml('<p>İstanbul</p><SCRIPT>x()</SCRIPT><p>after</p>'), '<p>İstanbul</p>\n<SCRIPT>x()</SCRIPT>\n<p>after</p>');
+  // a quote opens a value only after "=", as in browsers
+  assert.equal(formatHtml("<div><img alt=don't src=a.png><p>Bob's day</p></div>"), "<div>\n  <img alt=don't src=a.png>\n  <p>Bob's day</p>\n</div>");
+  assert.equal(formatHtml('<a  href = "x > <y"\n title=\'it\'s\'>z</a>'), '<a href="x > <y" title=\'it\'s\'>z</a>');
+});
+
+test('formatHtml stays fast on tags that never close', () => {
+  const t = performance.now();
+  formatHtml('<a '.repeat(20000) + "'");
+  formatHtml('<a title="'.repeat(20000));
+  assert.ok(performance.now() - t < 500, `took ${performance.now() - t} ms`);
+});
+
+test('htmlPreview puts the no-network policy after the doctype', () => {
+  assert.match(htmlPreview('<!doctype html><p>x'), /^<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none';.*<p>x$/);
+  assert.match(htmlPreview('<p>x'), /^<meta http-equiv="Content-Security-Policy"/);
 });

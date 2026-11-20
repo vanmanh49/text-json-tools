@@ -225,6 +225,10 @@ body.app textarea { min-height: 0; }
 .editor.qr { min-height: 260px; background: var(--panel-alt); }
 .editor.qr img { position: absolute; inset: 40px; width: calc(100% - 80px); height: calc(100% - 80px); object-fit: contain; }
 
+/* HTML Format preview: white like a browser page, whatever the theme. */
+.editor iframe.preview { flex: 1; width: 100%; min-height: 260px; border: 0; background: #fff; }
+body.app .editor iframe.preview { min-height: 0; }
+
 /* Empty state: sits over the editor; clicks outside its buttons reach the textarea underneath. */
 .empty {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -330,12 +334,12 @@ body.app .pretty { min-height: 0; }
 .pretty .node.collapsed > .kids, .pretty .node.collapsed > .line:last-child { display: none; }
 .pretty .node.collapsed > .line:first-child .summary { display: inline; }
 
-/* The full tab strip needs about 1340 px; drop the brand name and theme text to keep it on laptops. */
-@media (min-width: 1151px) and (max-width: 1400px) {
+/* The full tab strip needs about 1475 px (1250 px without the brand name); drop the brand name and theme text to keep it on laptops. */
+@media (min-width: 1251px) and (max-width: 1480px) {
   .brand-name, #theme .label { display: none; }
 }
 /* Tablets: the tool picker replaces the strip, and panel buttons show icons only so two panels fit side by side. */
-@media (max-width: 1150px) {
+@media (max-width: 1250px) {
   nav { display: none; }
   .tools-menu { display: block; }
   .panel-head .icon-btn .label { display: none; }
@@ -351,7 +355,7 @@ body.app .pretty { min-height: 0; }
   main { padding: 0 16px 16px; }
   .io { grid-template-columns: 1fr; }
   body.app .io { grid-template-rows: none; }
-  textarea, body.app textarea, .pretty, body.app .pretty { min-height: 45vh; }
+  textarea, body.app textarea, .pretty, body.app .pretty, body.app .editor iframe.preview { min-height: 45vh; }
   .icon-btn .label { display: none; }
   .icon-btn.flashing .label { display: inline; }
   /* one scrollable row so the sticky bar doesn't eat the screen */
