@@ -1,7 +1,9 @@
-import { test } from 'vitest';
+import { test, vi } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS, regexMatches, regexReplace, MAX_MATCHES, jsonToCsv, csvToJson, CSV_DELIMS, jsonToTs, yamlToJson, jsonToYaml, jsonQuery } from './tools.js';
 import jsQR from 'jsqr';
+import * as yaml from 'js-yaml';
+import { JSONPath } from 'jsonpath-plus';
 
 test('textToJson unescapes a quoted string', () => {
   assert.equal(textToJson(String.raw`"{\"name\":\"Ann\",\"age\":3}"`), '{\n  "name": "Ann",\n  "age": 3\n}');
@@ -16,7 +18,7 @@ test('textToJson throws on invalid input', () => {
   assert.throws(() => textToJson('nope'));
 });
 test('empty or whitespace-only input returns empty string', () => {
-  for (const f of [textToJson, jsonToText, minify]) {
+  for (const f of [textToJson, jsonToText, minify, s => lineTool(s, 'sort'), describeTime, jsonToCsv, csvToJson, jsonToTs]) {
     assert.equal(f(''), '');
     assert.equal(f('  \n\t '), '');
   }
@@ -412,4 +414,260 @@ test('formatHtml stays fast on tags that never close', () => {
 test('htmlPreview puts the no-network policy after the doctype', () => {
   assert.match(htmlPreview('<!doctype html><p>x'), /^<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none';.*<p>x$/);
   assert.match(htmlPreview('<p>x'), /^<meta http-equiv="Content-Security-Policy"/);
+});
+
+test('encoders map empty input to empty output', () => {
+  for (const f of [hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape]) assert.equal(f(''), '');
+  assert.equal(hexDecode(' \n'), '');
+});
+test('hexEncode gives lowercase UTF-8 hex', () => {
+  assert.equal(hexEncode('Hi é😀'), '486920c3a9f09f9880');
+});
+test('hexDecode ignores separators, 0x prefixes and case', () => {
+  for (const h of ['486920c3a9f09f9880', '48:69 20 C3A9 0xf0 0x9f 0x98 0x80', '48-69-20-c3-a9-f0-9f-98-80', '48,69,20,c3,a9,f0,9f,98,80']) {
+    assert.equal(hexDecode(h), 'Hi é😀');
+  }
+});
+test('hexDecode rejects odd digits, non-hex and non-UTF-8', () => {
+  assert.throws(() => hexDecode('486'), /two digits/);
+  assert.throws(() => hexDecode('zz'), /not valid hex/);
+  assert.throws(() => hexDecode('ff'), /isn't UTF-8/);
+});
+test('htmlEscape escapes the five special characters and htmlUnescape reverses it', () => {
+  const src = `<a href="x">Tom & Jerry's</a>`;
+  const esc = '&lt;a href=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/a&gt;';
+  assert.equal(htmlEscape(src), esc);
+  assert.equal(htmlUnescape(esc), src);
+});
+test('htmlUnescape decodes numbers and common names in one pass, leaving the rest', () => {
+  assert.equal(htmlUnescape('&amp;lt; &#233; &#x1F600; &copy; &bogus; &#x110000;'), '&lt; é 😀 © &bogus; &#x110000;');
+});
+test('unicodeEscape escapes non-ASCII code units and unicodeUnescape reverses it', () => {
+  assert.equal(unicodeEscape('é😀a\n'), '\\u00e9\\ud83d\\ude00a\n');
+  assert.equal(unicodeUnescape('\\u00e9\\ud83d\\ude00a\n'), 'é😀a\n');
+});
+test('unicodeUnescape decodes \\u{…} and leaves malformed escapes', () => {
+  assert.equal(unicodeUnescape('\\u{1F600} \\u12 \\u{110000}'), '😀 \\u12 \\u{110000}');
+});
+
+test('lineTool sorts naturally and drops one trailing newline', () => {
+  assert.equal(lineTool('b\nItem10\na\nitem2\nItem1\n', 'sort'), 'a\nb\nItem1\nitem2\nItem10');
+  assert.equal(lineTool('b\nItem10\na\nitem2\nItem1\n', 'sort-desc'), 'Item10\nitem2\nItem1\nb\na');
+});
+test('lineTool sorts Vietnamese like localeCompare', () => {
+  assert.equal(lineTool('ả\nă\na', 'sort'), ['ả', 'ă', 'a'].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).join('\n'));
+});
+test('lineTool unique keeps the first and handles CRLF', () => {
+  assert.equal(lineTool('x\r\ny\r\nx', 'unique'), 'x\ny');
+});
+test('lineTool no-empty and trim', () => {
+  assert.equal(lineTool(' a \n\n  \nb', 'no-empty'), ' a \nb');
+  assert.equal(lineTool(' a \n\n  \nb', 'trim'), 'a\n\n\nb');
+});
+test('lineTool reverse, upper, lower and unknown op', () => {
+  assert.equal(lineTool('a\nB\nc', 'reverse'), 'c\nB\na');
+  assert.equal(lineTool('a\nB', 'upper'), 'A\nB');
+  assert.equal(lineTool('a\nB', 'lower'), 'a\nb');
+  assert.throws(() => lineTool('x', 'nope'));
+});
+test('describeTime reads 10 digits as seconds and 13 as milliseconds', () => {
+  const s = describeTime('1700000000', 1700000060000);
+  assert.match(s, /^Read as       Unix seconds$/m);
+  assert.match(s, /^ISO 8601      2023-11-14T22:13:20\.000Z$/m);
+  assert.match(s, /^Relative      1 minute ago$/m);
+  const ms = describeTime('1700000000000', 1700000060000);
+  assert.match(ms, /^Read as       Unix milliseconds$/m);
+  assert.match(ms, /^ISO 8601      2023-11-14T22:13:20\.000Z$/m);
+});
+test('describeTime reads date text and says when it is local time', () => {
+  assert.match(describeTime('2023-11-14T22:13:20Z'), /^Unix seconds  1700000000$/m);
+  assert.match(describeTime('2023-11-14 22:13:20'), /^Read as       date text \(local time/m);
+  assert.match(describeTime('1700000000', 1699999940000), /^Relative      in 1 minute$/m);
+  assert.throws(() => describeTime('soon'), /can read/);
+});
+
+test('hash gives lowercase hex SHA digests of UTF-8 text', async () => {
+  assert.equal(await hash('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+  assert.equal(await hash('abc', 'SHA-1'), 'a9993e364706816aba3e25717850c26c9cd0d89d');
+  assert.deepEqual(HASH_ALGOS, ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512']);
+});
+test('hash handles emoji as UTF-8 and empty input as empty', async () => {
+  const want = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode('😀'))), b => b.toString(16).padStart(2, '0')).join('');
+  assert.equal(await hash('😀', 'SHA-512'), want);
+  assert.equal(await hash(''), '');
+});
+test('hash explains a missing crypto.subtle', async () => {
+  vi.stubGlobal('crypto', {});
+  try { await assert.rejects(hash('x'), /https/); } finally { vi.unstubAllGlobals(); }
+});
+
+test('regexMatches lists matches with numbered and named groups', () => {
+  assert.deepEqual(JSON.parse(regexMatches('ann@x.com, bo@y.org', '(\\w+)@(?<host>[\\w.]+)', 'g')), {
+    count: 2,
+    matches: [
+      { match: 'ann@x.com', index: 0, groups: ['ann', 'x.com'], named: { host: 'x.com' } },
+      { match: 'bo@y.org', index: 11, groups: ['bo', 'y.org'], named: { host: 'y.org' } },
+    ],
+  });
+});
+test('regexMatches takes only the first match without g and keeps empty matches with it', () => {
+  assert.equal(JSON.parse(regexMatches('ann@x.com, bo@y.org', '\\w+@', '')).count, 1);
+  assert.equal(JSON.parse(regexMatches('ab', 'x*', 'g')).count, 3);
+  assert.deepEqual(JSON.parse(regexMatches('a', '(b)?a', 'g')).matches[0].groups, [null]);
+  assert.deepEqual(JSON.parse(regexMatches('a', 'a', 'g')).matches[0], { match: 'a', index: 0 });
+});
+test('regexMatches counts every match but lists at most MAX_MATCHES', () => {
+  const r = JSON.parse(regexMatches('a'.repeat(1500), 'a', 'g'));
+  assert.equal(MAX_MATCHES, 1000);
+  assert.equal(r.count, 1500);
+  assert.equal(r.matches.length, 1000);
+});
+test('regexMatches throws on a bad pattern or flags, and is empty for empty input', () => {
+  assert.throws(() => regexMatches('a', '(', 'g'));
+  assert.throws(() => regexMatches('a', 'a', 'q'));
+  assert.equal(regexMatches('', 'a', 'g'), '');
+  assert.equal(regexMatches('a', '', 'g'), '');
+});
+test('regexReplace uses JS replacement patterns', () => {
+  assert.equal(regexReplace('ann@x.com', '(\\w+)@(?<h>\\w+)', 'g', '$<h>:$1'), 'x:ann.com');
+  assert.equal(regexReplace('a1b2', '\\d', 'g', ''), 'ab');
+  assert.equal(regexReplace('a1b2', '\\d', '', '#'), 'a#b2');
+});
+
+test('jsonToCsv writes a header from all keys and quotes where needed', () => {
+  assert.equal(jsonToCsv('[{"a":1,"b":"x,y"},{"b":"say \\"hi\\"","c":null,"d":{"e":[1]}}]'), 'a,b,c,d\n1,"x,y",,\n,"say ""hi""",,"{""e"":[1]}"');
+});
+test('JSON → CSV → JSON keeps delimiters, quotes, newlines, CRLF and edge spaces', () => {
+  const rows = [{ name: 'a,b', note: 'line1\r\nline2', q: '"x"', sp: ' pad ', semi: 'a;b', tab: 'a\tb' }];
+  for (const [d] of CSV_DELIMS) assert.deepEqual(JSON.parse(csvToJson(jsonToCsv(JSON.stringify(rows), d), d)), rows);
+});
+test('csvToJson strips a BOM, names blank headers, skips blank lines and pads short rows', () => {
+  assert.deepEqual(JSON.parse(csvToJson('﻿a,,a2\r\n1,2\r\n\r\n3\r\n')), [{ a: '1', column2: '2', a2: '' }, { a: '3', column2: '', a2: '' }]);
+});
+test('csvToJson rejects repeated headers, long rows and unclosed quotes', () => {
+  assert.throws(() => csvToJson('a,a\n1,2'), /appears twice/);
+  assert.throws(() => csvToJson('a\n1,2'), /Row 2 has 2 fields/);
+  assert.throws(() => csvToJson('a\n"1'), /Row 2 has a quote that never closes/);
+});
+test('csvToJson keeps values as text and a stray quote as written', () => {
+  assert.deepEqual(JSON.parse(csvToJson('id;n\n007;a"b', ';')), [{ id: '007', n: 'a"b' }]);
+});
+test('jsonToCsv handles arrays of arrays, primitives and a single object', () => {
+  assert.equal(jsonToCsv('[[1,2],[3]]'), '1,2\n3');
+  assert.equal(jsonToCsv('["x","y"]'), 'value\nx\ny');
+  assert.equal(jsonToCsv('{"a":1}'), 'a\n1');
+  assert.equal(jsonToCsv('[]'), '');
+});
+test('jsonToCsv rejects mixed items and top-level primitives', () => {
+  assert.throws(() => jsonToCsv('[{"a":1},2]'), /item 2 is a number/);
+  assert.throws(() => jsonToCsv('3'), /array or object/);
+});
+
+test('jsonToTs writes nested and array-item interfaces, optional keys and quoted names', () => {
+  assert.equal(jsonToTs('{"id":1,"name":"Ann","tags":["a"],"address":{"city":"Hanoi"},"users":[{"id":1},{"id":2,"email":null}],"first-name":"A"}'), `export interface Root {
+  id: number;
+  name: string;
+  tags: string[];
+  address: Address;
+  users: User[];
+  "first-name": string;
+}
+
+export interface Address {
+  city: string;
+}
+
+export interface User {
+  id: number;
+  email?: null;
+}`);
+});
+test('jsonToTs types top-level arrays and values', () => {
+  assert.equal(jsonToTs('[1,"a",[]]'), 'export type Root = (number | string | unknown[])[];');
+  assert.equal(jsonToTs('"x"'), 'export type Root = string;');
+  assert.equal(jsonToTs('[{"a":true}]'), 'export type Root = RootItem[];\n\nexport interface RootItem {\n  a: boolean;\n}');
+});
+test('jsonToTs names repeated and plural keys', () => {
+  assert.match(jsonToTs('{"a":{"x":1},"b":{"a":{"y":2}}}'), /interface A \{\n  x: number;\n\}[\s\S]*interface A2 \{\n  y: number;\n\}/);
+  const t = jsonToTs('{"categories":[{"v":1}],"data":[{"v":1}],"2fa":{"on":true}}');
+  assert.match(t, /categories: Category\[\];/);
+  assert.match(t, /data: DataItem\[\];/);
+  assert.match(t, /"2fa": T2fa;/);
+});
+test('jsonToTs unions differing types and types empty objects as records', () => {
+  assert.match(jsonToTs('{"v":[{"n":1},{"n":"x"}]}'), /  n: number \| string;/);
+  assert.match(jsonToTs('{"e":{}}'), /  e: Record<string, unknown>;/);
+  assert.match(jsonToTs('{"m":[[1],[2,3]]}'), /  m: number\[\]\[\];/);
+});
+
+test('yamlToJson keeps dates as text and resolves anchors and merge keys', () => {
+  assert.deepEqual(JSON.parse(yamlToJson('a: 1\nb: [x, "2"]\nd: 2024-01-01\nyes: no\nbase: &b {k: v}\nc:\n  <<: *b\n', yaml)),
+    { a: 1, b: ['x', '2'], d: '2024-01-01', yes: 'no', base: { k: 'v' }, c: { k: 'v' } });
+});
+test('yamlToJson reports bad YAML and several documents', () => {
+  assert.throws(() => yamlToJson('a: [', yaml), { message: 'unexpected end of the stream within a flow collection (line 1, column 5)' });
+  assert.throws(() => yamlToJson('a: 1\n---\nb: 2', yaml), /single document/);
+});
+test('jsonToYaml does not fold long strings and round-trips', () => {
+  const long = '{"a":1,"s":"long text that should not be folded even past eighty characters, really not folded at all"}';
+  assert.ok(!jsonToYaml(long, yaml).trim().includes('\n  '));
+  const x = JSON.stringify({ name: 'Ann Nguyễn', n: 3, ok: true, none: null, tags: ['dev', 'yes', '007'], nested: { list: [{ a: 1 }] } });
+  assert.equal(yamlToJson(jsonToYaml(x, yaml), yaml), JSON.stringify(JSON.parse(x), null, 2));
+});
+test('yaml functions return empty for empty input', () => {
+  assert.equal(yamlToJson('  ', yaml), '');
+  assert.equal(jsonToYaml('', yaml), '');
+});
+
+const QJ = JSON.stringify({ items: [{ n: 'a', price: 5 }, { n: 'b', price: 20 }], tags: ['x', 'y'] });
+test('jsonQuery returns every match as a pretty JSON array', () => {
+  assert.equal(jsonQuery(QJ, '$.tags[*]', JSONPath), '[\n  "x",\n  "y"\n]');
+  assert.deepEqual(JSON.parse(jsonQuery(QJ, '$.items[?(@.price < 10)].n', JSONPath)), ['a']);
+  assert.deepEqual(JSON.parse(jsonQuery(QJ, '$..n', JSONPath)), ['a', 'b']);
+  assert.equal(jsonQuery(QJ, '$.nope', JSONPath), '[]');
+});
+test('jsonQuery never runs code from a filter', () => {
+  globalThis.pwned = false;
+  try { jsonQuery(QJ, '$.items[?(globalThis.pwned = true)]', JSONPath); } catch { /* refusing is fine */ }
+  try { jsonQuery(QJ, '$.items[?(constructor.constructor("globalThis.pwned = true")())]', JSONPath); } catch { /* refusing is fine */ }
+  assert.equal(globalThis.pwned, false);
+  delete globalThis.pwned;
+});
+test('jsonQuery is empty for empty JSON or path', () => {
+  assert.equal(jsonQuery('', '$', JSONPath), '');
+  assert.equal(jsonQuery(QJ, ' ', JSONPath), '');
+});
+test('describeTime reads a date with no time as local midnight, as it says', () => {
+  const tz = process.env.TZ;
+  process.env.TZ = 'Asia/Ho_Chi_Minh'; // UTC+7, so UTC and local midnight differ
+  try {
+    for (const d of ['2024-01-01', '2024-01-01T00:00']) {
+      assert.match(describeTime(d), /^ISO 8601      2023-12-31T17:00:00\.000Z$/m, d);
+      assert.match(describeTime(d), /^Read as       date text \(local time/m);
+    }
+    assert.match(describeTime('2024-01'), /^ISO 8601      2023-12-31T17:00:00\.000Z$/m);
+    assert.match(describeTime('2024-01-01T00:00Z'), /^ISO 8601      2024-01-01T00:00:00\.000Z$/m);
+  } finally {
+    if (tz === undefined) delete process.env.TZ; else process.env.TZ = tz;
+  }
+});
+
+test('lineTool sorts 50,000 lines quickly', () => {
+  const lines = Array.from({ length: 50000 }, (_, i) => `row ${(i * 7919) % 50000} item${i}`);
+  const t = performance.now();
+  const out = lineTool(lines.join('\n'), 'sort').split('\n');
+  assert.ok(performance.now() - t < 1000, 'sorting took over 1 s');
+  assert.equal(out[0], 'row 0 item0');
+  assert.equal(out.at(-1), 'row 49999 item32321');
+});
+test('jsonToTs does not cut the s off words ending in -us', () => {
+  const t = jsonToTs('{"status":[{"a":1}],"bus":[{"b":1}]}');
+  assert.match(t, /status: StatusItem\[\];/);
+  assert.match(t, /bus: BusItem\[\];/);
+});
+test('lineTool capitalizes the first letter of each line', () => {
+  assert.equal(lineTool('hello world\n  đà nẵng\n1st place\n"quoted"\nNASA', 'capitalize'), 'Hello world\n  Đà nẵng\n1st place\n"quoted"\nNASA');
+});
+test('lineTool capitalizes each word, leaving the rest of the word alone', () => {
+  assert.equal(lineTool("hello wORLD\ndon't stop 1st e-mail\nhà nội, việt nam\niPhone", 'title'), "Hello WORLD\nDon't Stop 1st E-Mail\nHà Nội, Việt Nam\nIPhone");
 });

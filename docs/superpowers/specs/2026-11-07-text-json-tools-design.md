@@ -12,7 +12,7 @@ A public, static website of browser-only utilities. The first five:
 3. **JSON Minify**: minify formatted JSON to one line.
 4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
 
-Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code and UUID (ten tools in all).
+Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp, Hash, Regex Tester, JSON ⇄ CSV, JSON → TypeScript, YAML ⇄ JSON and JSON Query (eighteen tools in all).
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
 
@@ -24,7 +24,7 @@ No backend, accounts, history, share links, file upload, or analytics.
 
 - Static files only. Built with Vite (`npm run build`). GitHub Actions deploys `dist/` to GitHub Pages on every push to `main`; `dist/` also works on any static host.
 - React 19 with plain CSS and JS (ES modules, JSX).
-- Runtime dependencies: React, React DOM, `jsdiff` (`diff@9.0.0`), `qrcode@1.5.4` and `jsqr@1.4.0`, installed
+- Runtime dependencies: React, React DOM, `jsdiff` (`diff@9.0.0`), `qrcode@1.5.4`, `jsqr@1.4.0`, `js-yaml@5.5.0` and `jsonpath-plus@11.3.0` (each of the last two loaded only when its tool runs), installed
   from npm and bundled into `dist/` by Vite, so the page loads no third-party
   script. The tests import the same `"diff"` from `node_modules`.
 - Works on desktop and phone widths, light and dark theme.
@@ -104,7 +104,10 @@ Empty input to the three JSON tools returns `''` without an error.
   - The `iat`, `nbf` and `exp` claims are listed in plain English ("Expires in 2 hours (… UTC)"), and expired ones are shown in red.
   - Encrypted tokens (JWE, with 5 parts) and malformed tokens get a clear error.
   - The signature is never checked, and the page says so. The token textarea has `data-private`, so it is never written to browser storage.
-- **Encode / Decode (`#encode`):** a mode picker for Base64 encode, Base64 decode, URL encode and URL decode.
+- **Encode / Decode (`#encode`):** a mode picker for Base64 encode, Base64 decode, URL encode/decode, Hex encode/decode, HTML escape/unescape and Unicode escape/unescape.
+  - Hex: `hexEncode` gives the UTF-8 bytes as lowercase hex with no separators. `hexDecode` ignores whitespace, `:`, `,`, `-` and `0x` prefixes, accepts either case, and rejects non-hex characters, an odd digit count and non-UTF-8 bytes with clear errors.
+  - HTML: `htmlEscape` turns `& < > " '` into `&amp; &lt; &gt; &quot; &#39;`. `htmlUnescape` decodes decimal and hex character references and common named entities in one pass (`&amp;lt;` → `&lt;`); unknown names and code points above U+10FFFF stay as written.
+  - Unicode: `unicodeEscape` writes every UTF-16 code unit above 0x7E as `\uXXXX`. `unicodeUnescape` decodes `\uXXXX` and `\u{X…}`; malformed escapes stay as written. Neither HTML nor Unicode modes ever error.
   - Base64 handles UTF-8 and accepts the URL-safe alphabet without padding. Binary data gets a clear error instead of garbled text.
   - URL decode treats `+` as a space.
   - The input box has `data-private` (decoded Basic auth headers and keys are common), so it is never written to browser storage; text saved there by an older version is deleted on load.
@@ -121,13 +124,50 @@ Empty input to the three JSON tools returns `''` without an error.
   - v4: random. v7: 48-bit Unix ms then random; a batch is sorted so it ascends. v1 and v6: 100 ns ticks since 1582-10-15, one tick apart within a batch, a random clock sequence and a random node with the multicast bit set (never the MAC address). v6 is v1 with the time fields reordered so it sorts.
   - v3 and v5 (name-based) are not offered: they need a namespace and name input and MD5 / SHA-1.
   - Nothing is saved; the list is new on every load.
+- **Line Tools (`#lines`):** an Action picker over one Lines panel → Result panel.
+  - `lineTool(s, op)` with `op` from `LINE_OPS`: Sort A → Z, Sort Z → A, Remove duplicates, Reverse order, Trim spaces, Remove empty lines, UPPERCASE, lowercase, Capitalize first letter, Capitalize Each Word.
+  - Lines split on LF or CRLF; one trailing newline is dropped and the output uses LF. Sorting is natural (one `Intl.Collator` with `numeric`, so `item2` comes before `item10`; 100,000 lines sort in about 0.3 s, and a test keeps 50,000 under 1 s). Remove duplicates keeps the first of exact copies; Remove empty lines also drops whitespace-only lines. Capitalize first letter uppercases a letter that starts the line (after any spaces); Capitalize Each Word uppercases the first letter of every word, where a letter right after another letter, a digit or an apostrophe doesn't start one (`don't`, `1st` stay as they are). Both change only that letter, so `iPhone` and `NASA` keep the rest of their case.
+  - **Use as input** in the Result panel's header puts the result into the Lines panel, so actions can be chained (sort, then remove duplicates, then trim). It goes through `setText`, so Cmd/Ctrl+Z restores the previous input. Disabled while the result is empty.
+- **Timestamp (`#time`):** a Timestamp or date panel → Converted panel, with a **Now** button that puts the current Unix seconds in the input.
+  - `describeTime(s)`: digits only (optional `-` and decimals) is a Unix timestamp, read by size: below 1e11 seconds, below 1e14 milliseconds, below 1e17 microseconds, else nanoseconds. Anything else goes through `Date.parse`, so a date without a zone is local time; a date with no time (`2024-01-01`, `2024-01`) is local midnight, not the UTC midnight `Date.parse` alone would give. Unreadable input gets a clear error.
+  - The output is one labelled line each: Read as (which reading was used), Unix seconds, Unix ms, ISO 8601, UTC, Local (the browser's locale and time zone) and Relative ("5 days ago", "in 2 hours").
+- **Hash (`#hash`):** an Algorithm picker (SHA-1, SHA-256 (default), SHA-384, SHA-512) over a Text panel → Hash (hex) panel.
+  - `hash(s, algo)` is async: the lowercase hex `crypto.subtle.digest` of the UTF-8 bytes. Whitespace is hashed like any text; only empty input gives empty output. Without `crypto.subtle` (a plain-http page) it says the page must be opened over https.
+  - MD5 (not in `crypto.subtle`) and HMAC are not offered.
+  - The Text box has `data-private` (it may hold passwords), so it is never written to browser storage.
+- **Regex Tester (`#regex`):** Pattern and Flags boxes (Flags `g` by default) and a Show picker (Matches / Replace, with a "With" box for Replace) over a Text panel → Matches or Replaced text panel. The boxes are not saved.
+  - `regexMatches(text, pattern, flags)` gives `{ count, matches }` as pretty JSON: every match is counted, the first 1000 (`MAX_MATCHES`) are listed as `{ match, index }` plus `groups` (numbered, unmatched → `null`) and `named` when the pattern has them. Empty matches are included. Without `g` only the first match is taken, as in JavaScript.
+  - `regexReplace(text, pattern, flags, replacement)` is `String.prototype.replace`, so `$1`, `$<name>` and `$&` work.
+  - A bad pattern or flag shows the browser's message on the error line. Empty text or pattern gives empty output. Known limit: a catastrophically backtracking pattern can hang the tab, as in search.
+- **JSON ⇄ CSV (`#csv`):** a Convert picker (JSON → CSV, CSV → JSON) and a Delimiter picker (Comma, Semicolon, Tab). The panel labels and file types follow the direction; switching keeps the input text, and Try a sample gives JSON or CSV to match.
+  - `jsonToCsv(s, delim)`: an array of objects gets a header of every key, first seen first, and a missing key is an empty cell. An array of arrays becomes rows with no header, an array of values one `value` column, and a single object one row. Strings are written as they are, `null` as empty, nested objects and arrays as JSON. A cell is quoted when it holds the delimiter, a quote or a line break, or starts or ends with whitespace; quotes inside are doubled. Lines end in LF. Mixing objects with other items, or a top-level value, gets a clear error.
+  - `csvToJson(s, delim)`: RFC 4180 (quoted fields may hold the delimiter, `""` and line breaks; LF or CRLF), a leading BOM is dropped and blank lines are skipped. The first row is the header; a blank name becomes `columnN` and a repeated one is an error. Every value stays a string (`007` stays `007`). A row with more fields than the header, or a quote that never closes, is an error naming the row; a shorter row is padded with empty strings.
+  - Known limit: cells starting with `=`, `+`, `-` or `@` are not escaped, so a spreadsheet may treat them as formulas; escaping would change the data.
+- **JSON → TypeScript (`#ts`):** a JSON panel → TypeScript panel.
+  - `jsonToTs(s)` writes `export interface` declarations, root (`Root`) first, then nested ones in the order they appear. Types are `string`, `number`, `boolean`, `null`, an interface name, `T[]`, `(A | B)[]` for mixed arrays, `unknown[]` for an empty array and `Record<string, unknown>` for an empty object.
+  - Objects in one array merge into one interface: a key missing from some is optional (`key?:`), and a key with different types gets a union, first seen first.
+  - Names: an object's interface is its key in PascalCase; an array's item interface is the singular (`users` → `User`, `categories` → `Category`, otherwise `+Item`, so `data` → `DataItem` and `status` → `StatusItem`). A name starting with a digit gets a `T`, and a repeated name gets `2`, `3`, …. Keys that aren't plain identifiers are quoted.
+  - A top-level array or value becomes `export type Root = …;` (array items are `RootItem`).
+- **YAML ⇄ JSON (`#yaml`):** a Convert picker (YAML → JSON, JSON → YAML); labels and file types follow the direction.
+  - `yamlToJson(s, yaml)` loads one YAML 1.2 document with js-yaml's core schema plus merge keys (`<<`): anchors and aliases resolve, dates and `yes`/`no` stay strings. Errors keep their first line with the place as "(line L, column C)"; several documents are an error.
+  - `jsonToYaml(s, yaml)` dumps with no line folding and no anchors.
+  - `yaml` is the js-yaml module, passed in by the component, which imports it only when its tab is visible and has text, so it is its own chunk and never loads for other tools.
+  - Known limits: comments are lost, `.inf`/`.nan` become `null`, and numbers above 2^53 lose precision as with `JSON.parse`.
+- **JSON Query (`#query`):** a Path box (`$` by default, not saved) over a JSON panel → Results panel.
+  - `jsonQuery(s, path, JSONPath)` runs jsonpath-plus with `wrap: true`, so the result is always a JSON array of every match (`[]` for none), pretty-printed. Empty JSON or path gives empty output; a bad path shows the library's message.
+  - Filters such as `?(@.price < 10)` run with `eval: 'safe'`, the library's own interpreter; nothing in a path is ever run as JavaScript. A test checks that a filter cannot run code.
+  - The library is its own chunk, imported only when the tab is visible and has text.
+- **Hidden tools:** every tool is on the page, all but one hidden. A hidden `TransformTool` does not run its function; it runs when the tab is shown, so saved big text in an unused tool costs nothing at page load.
+- **Async tools:** a `TransformTool` function may return a promise. The output is empty until it settles, and a result for text that has since changed is dropped, so a slow old result never replaces a newer one. A rejection's message goes to the error line.
 - **Compare as JSON:** a checkbox in the Compare toolbar.
   - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.
   - The originals go on the undo stack.
   - An invalid side is named, with its line and column.
 - **Shell:**
-  - A top bar holds the `{ }` brand, the tool tabs as a segmented control, a theme switch (System → Light → Dark, remembered) and a ⚙ menu.
-  - The tabs need about 1340 px. From 1151 to 1400 px the brand name and the theme button's text are hidden so they still fit. At 1150 px and below (tablets) the tabs give way to a tool picker: a button showing the current tool's name that opens a list of every tool, with the current one highlighted; the brand name is back, and panel header buttons show icons only so two panels fit side by side. On phones (700 px and below) the brand name is hidden again and the picker fills the row. Picking a tool, a click outside or Escape closes it (Escape also for the ⚙ menu).
+  - A top bar holds the `{ }` brand, the tool group menus, a theme switch (System → Light → Dark, remembered) and a ⚙ menu.
+  - The tools are in four groups, `NAV`'s third field: JSON, Text, Encode and More. Above 700 px the top bar shows one menu per group; the menu of the current tool's group is highlighted and shows that tool's name, the others show the group name. Picking a tool closes its menu.
+  - Pinned tools: every tool in the menus has a ☆ button beside its link (`aria-pressed`, "Pin <tool>" / "Unpin <tool>"). Pinned tools show as tabs before the group menus, in pin order, each with a small solid pushpin in the accent colour, tilted as if stuck in (decorative, hidden from screen readers); on phones they head the picker under "Pinned". At most 6: with 6 pinned, the other pin buttons are disabled. Pins are saved in `tjt:pins` (a JSON array of tab ids; unknown ids and broken data are ignored) whatever the "remember" setting, like the theme. When the pinned tabs don't fit, they scroll sideways and the group menus stay put.
+  - At 700 px and below (phones) the group menus give way to a tool picker: a button showing the current tool's name that opens a list of every tool under group headings, with the current one highlighted. The list scrolls when it is taller than the screen. The brand name is hidden and the picker fills the row. From 1250 px down, the brand name and the theme button's text are hidden, and panel header buttons show icons only so two panels fit side by side. Picking a tool, a click outside or Escape closes a menu (Escape also for the ⚙ menu).
   - The menu has "Remember my text in this browser" (on by default) and "Clear all panels", which needs a second click to confirm.
   - Format and the three JSON tools fill the screen (`body.app`), and their panels scroll inside. Compare scrolls the page.
   - Under 700px the panels stack and the tabs scroll sideways.
@@ -140,7 +180,7 @@ Empty input to the three JSON tools returns `''` without an error.
   - On an editable JSON panel, the error also offers **Fix JSON** when `repairJson` can turn the text into valid JSON. It removes `//` and `/* */` comments and trailing commas, turns single-quoted strings into double-quoted ones, quotes bare keys, maps `True`/`False`/`None` to `true`/`false`/`null` and `undefined`/`NaN`/`Infinity` to `null`, and escapes raw line breaks inside strings, keeping the rest of the layout. It goes through `setText`, so Cmd/Ctrl+Z undoes it. It does not add missing commas, so text that still fails gets no button. Above 1 MB the repair is not tried in advance: the button always shows, and if the repair fails on click the error line says it can't be fixed automatically.
   - Error positions come from `errorLocation()`. It handles V8 positions, V8 "Unexpected token" snippets, Firefox line/column, and Safari (no position).
   - Editable panels show an empty state (Paste, Try a sample, "or drop a file here") and accept a dropped file of up to 25 MB, read locally. A file dropped anywhere else on the page is ignored, so it can't open in the tab and replace the app.
-  - Output panels show "The result appears here as you type." and have a **Send to…** menu that fills another tool's input and switches tab.
+  - Output panels show "The result appears here as you type." and have a **Send to…** menu that fills another tool's input and switches tab (every tool with a text input except JWT, Timestamp and UUID).
 - **Remembered text:**
   - Editable text is saved to `localStorage` (`tjt:text:<id>`, debounced) and restored on load.
   - Text over 2 MB isn't saved; its status bar says so.

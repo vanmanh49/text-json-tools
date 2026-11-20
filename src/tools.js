@@ -241,10 +241,54 @@ export function base64Decode(s) {
   b += '='.repeat((4 - (b.length % 4)) % 4);
   let bin;
   try { bin = atob(b); } catch { throw new Error('This is not valid Base64.'); }
-  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return utf8(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+
+function utf8(bytes) {
   try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
   catch { throw new Error("The decoded data isn't UTF-8 text (it may be an image or other binary file)."); }
 }
+
+const toHex = bytes => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+export const hexEncode = s => toHex(new TextEncoder().encode(s));
+
+export const HASH_ALGOS = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
+
+// Hex digest of the UTF-8 text. Whitespace is hashed like any other text; only '' gives ''.
+export async function hash(s, algo = 'SHA-256') {
+  if (!s) return '';
+  if (!globalThis.crypto?.subtle) throw new Error('Hashing needs the page to be opened over https.'); // plain-http pages have no crypto.subtle
+  return toHex(new Uint8Array(await crypto.subtle.digest(algo, new TextEncoder().encode(s))));
+}
+
+// Accepts whitespace, ':', ',' and '-' between bytes, 0x prefixes and either case.
+export function hexDecode(s) {
+  const h = s.replace(/0x/gi, '').replace(/[\s:,-]+/g, '');
+  if (!/^[0-9a-f]*$/i.test(h)) throw new Error('This is not valid hex.');
+  if (h.length % 2) throw new Error('Hex needs two digits per byte.');
+  return utf8(Uint8Array.from(h.match(/../g) ?? [], b => parseInt(b, 16)));
+}
+
+const HTML_ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+export const htmlEscape = s => s.replace(/[&<>"']/g, c => HTML_ESC[c]);
+
+// shortcut: only common named entities; add a full table if users paste others.
+const ENTITIES = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0', copy: '©', reg: '®', trade: '™', hellip: '…', mdash: '—', ndash: '–',
+  lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', laquo: '«', raquo: '»', euro: '€', pound: '£', yen: '¥', cent: '¢', deg: '°',
+  times: '×', divide: '÷', middot: '·', bull: '•',
+};
+const fromCode = (n, raw) => (n <= 0x10ffff ? String.fromCodePoint(n) : raw);
+
+// One pass, so '&amp;lt;' becomes '&lt;'. Unknown names and out-of-range numbers stay as written.
+export const htmlUnescape = s => s.replace(/&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi, (raw, dec, hex, name) =>
+  dec ? fromCode(parseInt(dec, 10), raw) : hex ? fromCode(parseInt(hex, 16), raw) : Object.hasOwn(ENTITIES, name) ? ENTITIES[name] : raw);
+
+export const unicodeEscape = s => s.replace(/[^\x00-\x7e]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+
+// \uXXXX and \u{X…}; malformed or out-of-range escapes stay as written.
+export const unicodeUnescape = s => s.replace(/\\u(?:([0-9a-f]{4})|\{([0-9a-f]{1,6})\})/gi, (raw, four, braced) =>
+  fromCode(parseInt(four ?? braced, 16), raw));
 
 export const urlEncode = s => encodeURIComponent(s);
 // '+' means a space in query strings; a literal plus is always encoded as %2B, so this is safe.
@@ -347,7 +391,7 @@ export function uuids(count, version = 4, now = Date.now()) {
     }
     b[6] = (b[6] & 0x0f) | (version << 4);
     b[8] = (b[8] & 0x3f) | 0x80; // RFC 9562 variant
-    const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+    const h = toHex(b);
     return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
   });
   // A v7 batch shares one millisecond; sorting makes it ascend like a counter would.
@@ -414,3 +458,240 @@ export function formatHtml(s) {
 // The iframe's empty sandbox already stops scripts, forms and popups.
 const PREVIEW_HEAD = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data: blob:; font-src data:"><base target="_blank">';
 export const htmlPreview = s => s.replace(/^\s*(<!doctype[^>]*>)?/i, '$1' + PREVIEW_HEAD);
+
+export const LINE_OPS = [
+  ['sort', 'Sort A → Z'], ['sort-desc', 'Sort Z → A'], ['unique', 'Remove duplicates'], ['reverse', 'Reverse order'],
+  ['trim', 'Trim spaces'], ['no-empty', 'Remove empty lines'], ['upper', 'UPPERCASE'], ['lower', 'lowercase'],
+  ['capitalize', 'Capitalize first letter'], ['title', 'Capitalize Each Word'],
+];
+// natural: item2 before item10. One collator: localeCompare with options builds a new one per call (~14x slower).
+const byText = new Intl.Collator(undefined, { numeric: true }).compare;
+const LINE_FNS = {
+  sort: l => l.sort(byText), 'sort-desc': l => l.sort(byText).reverse(), unique: l => [...new Set(l)], reverse: l => l.reverse(),
+  trim: l => l.map(x => x.trim()), 'no-empty': l => l.filter(x => x.trim()), upper: l => l.map(x => x.toUpperCase()), lower: l => l.map(x => x.toLowerCase()),
+  // Only the first letter changes, so iPhone and NASA keep their case. A letter right after a digit or an
+  // apostrophe doesn't start a word, so 1st and don't stay as they are.
+  capitalize: l => l.map(x => x.replace(/^(\s*)(\p{L})/u, (_, sp, c) => sp + c.toUpperCase())),
+  title: l => l.map(x => x.replace(/(^|[^\p{L}\p{N}'’])(\p{L})/gu, (_, before, c) => before + c.toUpperCase())),
+};
+
+// Applies one LINE_OPS operation to the lines of `s` (LF or CRLF); one trailing newline is dropped, output uses LF.
+export function lineTool(s, op) {
+  if (!Object.hasOwn(LINE_FNS, op)) throw new Error(`Unknown line operation: ${op}`);
+  if (!s.trim()) return '';
+  const lines = s.split(/\r?\n/);
+  if (lines.at(-1) === '') lines.pop();
+  return LINE_FNS[op](lines).join('\n');
+}
+
+// A digits-only timestamp's unit is guessed from its size: [upper bound, unit, ms per unit].
+const TIME_UNITS = [[1e11, 'seconds', 1000], [1e14, 'milliseconds', 1], [1e17, 'microseconds', 1e-3], [Infinity, 'nanoseconds', 1e-6]];
+
+// A Unix timestamp or a date as seconds, ms, ISO, UTC, local and relative time, one labelled line each.
+export function describeTime(s, now = Date.now()) {
+  const t = s.trim();
+  if (!t) return '';
+  let ms, read;
+  if (/^-?\d+(\.\d+)?$/.test(t)) {
+    const n = Number(t);
+    const [, unit, perUnit] = TIME_UNITS.find(([max]) => Math.abs(n) < max);
+    ms = n * perUnit;
+    read = 'Unix ' + unit;
+  } else {
+    // Date.parse reads a date-only ISO string (2024-01-01) as UTC but a date-time as local; make both local, as Read as says.
+    ms = Date.parse(/^\d{4}-\d\d(-\d\d)?$/.test(t) ? t + (t.length === 7 ? '-01' : '') + 'T00:00' : t);
+    read = 'date text (local time unless it names a zone)';
+  }
+  const date = new Date(ms);
+  if (isNaN(date)) throw new Error("This isn't a Unix timestamp or a date this browser can read.");
+  const d = (date.getTime() - now) / 1000;
+  return [
+    ['Read as', read],
+    ['Unix seconds', Math.floor(date.getTime() / 1000)],
+    ['Unix ms', date.getTime()],
+    ['ISO 8601', date.toISOString()],
+    ['UTC', date.toUTCString()],
+    ['Local', new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'long' }).format(date)],
+    ['Relative', Math.abs(d) < 1 ? 'now' : d < 0 ? `${span(-d)} ago` : `in ${span(d)}`],
+  ].map(([k, v]) => k.padEnd(14) + v).join('\n');
+}
+
+export const MAX_MATCHES = 1000;
+
+// { count, matches } as pretty JSON: every match is counted, the first MAX_MATCHES are listed with their groups.
+// Without the g flag only the first match is taken, as in JS. Bad patterns and flags throw.
+// shortcut: a catastrophically backtracking pattern hangs the tab (same as findAll); move matching to a Worker with a timeout if users hit it.
+export function regexMatches(text, pattern, flags) {
+  if (!text || !pattern) return '';
+  const re = new RegExp(pattern, flags);
+  const found = re.global ? text.matchAll(re) : [re.exec(text)].filter(Boolean);
+  const matches = [];
+  let count = 0;
+  for (const m of found) {
+    if (count++ >= MAX_MATCHES) continue;
+    const item = { match: m[0], index: m.index };
+    if (m.length > 1) item.groups = m.slice(1).map(g => g ?? null);
+    if (m.groups) item.named = Object.fromEntries(Object.entries(m.groups).map(([k, v]) => [k, v ?? null]));
+    matches.push(item);
+  }
+  return JSON.stringify({ count, matches }, null, 2);
+}
+
+export function regexReplace(text, pattern, flags, replacement) {
+  if (!text || !pattern) return '';
+  return text.replace(new RegExp(pattern, flags), replacement);
+}
+
+export const CSV_DELIMS = [[',', 'Comma'], [';', 'Semicolon'], ['\t', 'Tab']];
+const isObject = x => x !== null && typeof x === 'object' && !Array.isArray(x);
+const kind = x => (x === null ? 'null' : Array.isArray(x) ? 'array' : typeof x);
+
+// A JSON array of objects (header = every key, first seen first), of arrays (no header) or of values
+// (one "value" column), or a single object, as CSV with LF line ends.
+export function jsonToCsv(s, delim = ',') {
+  if (!s.trim()) return '';
+  const v = JSON.parse(s);
+  if (!isObject(v) && !Array.isArray(v)) throw new Error('CSV needs a JSON array or object.');
+  const rows = Array.isArray(v) ? v : [v];
+  if (!rows.length) return '';
+  const cell = x => {
+    const t = x == null ? '' : typeof x === 'object' ? JSON.stringify(x) : String(x);
+    return t.includes(delim) || /["\r\n]|^\s|\s$/.test(t) ? `"${t.replaceAll('"', '""')}"` : t;
+  };
+  // A line holding one empty cell is written "" so it isn't read back as a blank line.
+  const line = cells => cells.map(cell).join(delim) || '""';
+  if (rows.every(Array.isArray)) return rows.map(line).join('\n');
+  if (rows.every(x => !isObject(x) && !Array.isArray(x))) return ['value', ...rows].map(x => line([x])).join('\n');
+  const bad = rows.findIndex(x => !isObject(x));
+  if (bad >= 0) {
+    const k = kind(rows[bad]);
+    throw new Error(`Each item must be an object (item ${bad + 1} is ${/^[aeiou]/.test(k) ? 'an' : 'a'} ${k}).`);
+  }
+  const keys = [...new Set(rows.flatMap(Object.keys))];
+  return [line(keys), ...rows.map(r => line(keys.map(k => r[k])))].join('\n');
+}
+
+// RFC 4180 CSV with a header row → a JSON array of objects whose values are all strings (no number guessing:
+// "007" stays "007"). Handles quoted delimiters, "" and line breaks, LF or CRLF, a BOM, and skips blank lines.
+export function csvToJson(s, delim = ',') {
+  if (!s.trim()) return '';
+  const text = s.replace(/^﻿/, '');
+  const rows = [];
+  let row = [], field = '', quoted = false, inQuotes = false;
+  const endField = () => { row.push(field); field = ''; quoted = false; };
+  const endRow = () => {
+    const blank = !row.length && !field && !quoted;
+    endField();
+    if (!blank) rows.push(row);
+    row = [];
+  };
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c !== '"') field += c;
+      else if (text[i + 1] === '"') { field += '"'; i++; }
+      else inQuotes = false;
+    } else if (c === '"' && !field && !quoted) inQuotes = quoted = true;
+    else if (c === delim) endField();
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      endRow();
+    } else field += c; // a quote inside an unquoted field is kept as written
+  }
+  if (inQuotes) throw new Error(`Row ${rows.length + 1} has a quote that never closes.`);
+  endRow();
+  if (!rows.length) return '';
+  const header = rows[0].map((h, i) => h || `column${i + 1}`);
+  const seen = new Set();
+  for (const h of header) {
+    if (seen.has(h)) throw new Error(`Column name "${h}" appears twice.`);
+    seen.add(h);
+  }
+  return JSON.stringify(rows.slice(1).map((r, n) => {
+    if (r.length > header.length) throw new Error(`Row ${n + 2} has ${r.length} fields but the header has ${header.length}.`);
+    return Object.fromEntries(header.map((h, j) => [h, r[j] ?? '']));
+  }), null, 2);
+}
+
+// TypeScript interfaces for a JSON sample. Pass 1 merges every value seen at a position into a shape:
+// a Map from kind ('string' | 'number' | 'boolean' | 'null' | 'object' | 'array') to its details, in first-seen
+// order. Objects in one array share a shape, so a key missing from some of them becomes optional.
+function addShape(shape, v) {
+  const k = v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v;
+  if (k === 'object') {
+    const o = shape.get(k) ?? { n: 0, keys: new Map() };
+    o.n++;
+    for (const [key, val] of Object.entries(v)) {
+      const f = o.keys.get(key) ?? { count: 0, shape: new Map() };
+      f.count++;
+      addShape(f.shape, val);
+      o.keys.set(key, f);
+    }
+    shape.set(k, o);
+  } else if (k === 'array') {
+    const elems = shape.get(k) ?? new Map();
+    for (const val of v) addShape(elems, val);
+    shape.set(k, elems);
+  } else shape.set(k, true);
+}
+
+const pascal = key => {
+  const name = key.replace(/(\p{Ll}|\p{N})(\p{Lu})/gu, '$1 $2').split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+    .map(w => w[0].toUpperCase() + w.slice(1)).join('') || 'Item';
+  return /^\p{N}/u.test(name) ? 'T' + name : name;
+};
+// users → User, categories → Category, data → DataItem, status → StatusItem
+const singular = name => (/ies$/.test(name) ? name.slice(0, -3) + 'y' : /[^su]s$/.test(name) ? name.slice(0, -1) : name + 'Item'); // status → StatusItem
+
+export function jsonToTs(s) {
+  if (!s.trim()) return '';
+  const root = new Map();
+  addShape(root, JSON.parse(s));
+  // Pass 2: print. Each interface takes its slot before its children, so the output reads top-down.
+  const out = [], used = new Set();
+  const unique = name => { let n = name; for (let i = 2; used.has(n); i++) n = name + i; used.add(n); return n; };
+  const typeOf = (shape, hint) => [...shape].map(([k, d]) => (k === 'object' ? objectType(d, hint) : k === 'array' ? arrayType(d, hint) : k)).join(' | ');
+  const arrayType = (elems, hint) => {
+    if (!elems.size) return 'unknown[]';
+    const t = typeOf(elems, singular(hint));
+    return (elems.size > 1 ? `(${t})` : t) + '[]';
+  };
+  const objectType = (o, hint) => {
+    if (!o.keys.size) return 'Record<string, unknown>';
+    const name = unique(hint), slot = out.push('') - 1;
+    const fields = [...o.keys].map(([key, f]) =>
+      `  ${/^[A-Za-z_$][\w$]*$/.test(key) ? key : JSON.stringify(key)}${f.count < o.n ? '?' : ''}: ${typeOf(f.shape, pascal(key))};`);
+    out[slot] = `export interface ${name} {\n${fields.join('\n')}\n}`;
+    return name;
+  };
+  if (root.has('object') && root.get('object').keys.size) objectType(root.get('object'), 'Root');
+  else {
+    used.add('Root');
+    out.unshift(`export type Root = ${typeOf(root, 'Root')};`);
+  }
+  return out.join('\n\n');
+}
+
+// `yaml` is the js-yaml module, passed in so the page loads it only when the YAML tool is used.
+// YAML 1.2 core schema plus merge keys (<<), so dates stay text and yes/no stay strings. One document only.
+export function yamlToJson(s, yaml) {
+  if (!s.trim()) return '';
+  let v;
+  try { v = yaml.load(s, { schema: yaml.CORE_SCHEMA.withTags(yaml.mergeTag) }); }
+  catch (e) { throw new Error(e.message.split('\n')[0].replace(/\((\d+):(\d+)\)$/, '(line $1, column $2)')); } // drop the code snippet below
+  return JSON.stringify(v, null, 2);
+}
+
+// lineWidth -1: never fold long strings; noRefs: repeated values are written out, not as anchors.
+export function jsonToYaml(s, yaml) {
+  if (!s.trim()) return '';
+  return yaml.dump(JSON.parse(s), { lineWidth: -1, noRefs: true });
+}
+
+// `JSONPath` is jsonpath-plus's export, passed in so the page loads it only when the query tool is used.
+// eval: 'safe' runs filter expressions in the library's own interpreter, never eval/Function (older versions had a
+// code-execution hole there). Keep it explicit.
+export function jsonQuery(s, path, JSONPath) {
+  if (!s.trim() || !path.trim()) return '';
+  return JSON.stringify(JSONPath({ path, json: JSON.parse(s), eval: 'safe', wrap: true }), null, 2);
+}

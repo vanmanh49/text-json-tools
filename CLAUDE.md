@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A static, browser-only website with ten tools: JSON Format (Postman-style pretty view), Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right), Text → JSON (unescape), JSON → Text (escape), JSON Minify, HTML Format (indent, or preview in a sandboxed frame), JWT Decode, Encode/Decode (Base64, URL), QR Code (text ⇄ QR image), and UUID (v1, v4, v6, v7 generator). No backend. Built with Vite and React 19; the output in `dist/` is plain static files. The design spec and plans are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
+A static, browser-only website with eighteen tools: JSON Format (Postman-style pretty view), Compare & Merge (WinMerge-style side-by-side diff with per-line and per-block copy left/right), Text → JSON (unescape), JSON → Text (escape), JSON Minify, HTML Format (indent, or preview in a sandboxed frame), JWT Decode, Encode/Decode (Base64, URL, hex, HTML entities, Unicode escapes), QR Code (text ⇄ QR image), UUID (v1, v4, v6, v7 generator), Line Tools (sort, dedupe, trim, case, capitalize), Timestamp (Unix time ⇄ date), Hash (SHA-1/256/384/512) Regex Tester (matches with groups, replace) JSON ⇄ CSV, JSON → TypeScript, YAML ⇄ JSON and JSON Query (JSONPath). No backend. Built with Vite and React 19; the output in `dist/` is plain static files. The design spec and plans are in `docs/superpowers/`. The spec is the authority on behavior, so update it when behavior changes.
 
 ## Commands
 
 ```bash
-npm install                     # React, jsdiff, qrcode, jsQR, Vite, Vitest
+npm install                     # React, jsdiff, qrcode, jsQR, js-yaml, jsonpath-plus, Vite, Vitest
 npm run dev                     # dev server with hot reload
 npm test                        # vitest run (jsdom)
 npx vitest run -t "copy"        # run tests whose name matches
@@ -23,23 +23,23 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
 
 - **File map** (all under `src/`):
   - `main.jsx` calls `installGlobalListeners()` and renders `App`.
-  - `App.jsx`: top bar, tabs, theme, settings menu (remember text, Clear all). Toggles `body.app` for every tool except Compare. That class makes the section fill the screen so its panels scroll inside; Compare scrolls the page because of its sticky toolbar and location bar. Focuses the first editable textarea of the tab when it opens.
-  - `useHashTab.js`: `NAV`, the one list of tabs and menu labels, and the current tab from `location.hash` (unknown or empty → `format`).
+  - `App.jsx`: top bar, group menus and pinned tools, theme, settings menu (remember text, Clear all). Toggles `body.app` for every tool except Compare. That class makes the section fill the screen so its panels scroll inside; Compare scrolls the page because of its sticky toolbar and location bar. Focuses the first editable textarea of the tab when it opens.
+  - `useHashTab.js`: `NAV`, the one list of tabs, menu labels and groups (`GROUPS`: JSON, Text, Encode, More; the top bar shows one menu per group), and the current tab from `location.hash` (unknown or empty → `format`).
   - `store.js`: the try/catch `store` helper around `localStorage`, `settings()`, `MAX_SAVE`.
   - `textStore.js`: the text of every editable panel, by textarea id (`EDITABLE_IDS`), with `useText(id)`, debounced saving and the "too large / not saved" notes.
   - `setText.js`: replaces a textarea's text so Cmd/Ctrl+Z can undo it.
   - `globals.js`: page-wide listeners (drop guard, Ctrl/⌘+F, `beforeinput` undo guard, undo/redo of directly set text, paste).
   - `samples.js`: "Try a sample" text per textarea id.
-  - `ui/IconButton.jsx`: `IconButton` and the static `ICONS` map; `flash()` for "Copied".
-  - `ui/Panel.jsx`: one panel: header buttons (Copy, Paste, Clear, Download, Send to), `.editor` with the textarea (or the Pretty view as `children`), empty state, file drop, `StatusBar`. Exports `fileDrop(onFile)`, the drag-and-drop handlers also used by the QR image area.
+  - `ui/IconButton.jsx`: `IconButton`, `Icon` (a decorative `aria-hidden` svg) and the static `ICONS` map; `flash()` for "Copied".
+  - `ui/Panel.jsx`: one panel: header buttons (Copy, Paste, Clear, Download, Send to, and Use as input when given `useAsInput`; `TransformTool` passes it for `chain` tools such as Line Tools), `.editor` with the textarea (or the Pretty view as `children`), empty state, file drop, `StatusBar`. Exports `fileDrop(onFile)`, the drag-and-drop handlers also used by the QR image area.
   - `ui/StatusBar.jsx`: lines, size, JSON validity, Go to error, Fix JSON.
   - `ui/SearchBox.jsx`: the search box and its toggles.
-  - `tools/TransformTool.jsx`: Text → JSON, JSON → Text, Minify, JWT and Encode/Decode, all one input panel → function → output panel.
+  - `tools/TransformTool.jsx`: Text → JSON, JSON → Text, Minify, JWT, Encode/Decode, Line Tools, Timestamp, Hash, Regex Tester, JSON ⇄ CSV, JSON → TypeScript, YAML ⇄ JSON and JSON Query, all one input panel → function → output panel. The function may return a promise; a result for text that has since changed is dropped.
   - `tools/FormatTool.jsx`, `tools/CompareTool.jsx`: the two bigger tools.
   - `tools/QrTool.jsx`: QR Code. Text panel → `qrSvg` image; an image dropped on the QR panel, opened, or pasted (image and no text on the clipboard) is decoded with a lazily imported `jsqr` (its own chunk) into the Text panel. jsdom has no canvas, so decoding is tested in `tools.test.js` by rasterising `qrSvg` output, and in a real browser.
   - `tools/HtmlTool.jsx`: HTML Format. HTML panel → `formatHtml` output, or (Show: Preview) an `<iframe sandbox="">` whose `srcDoc` is `htmlPreview(text)`. Both use the text debounced 150 ms: formatting a few MB takes ~100 ms and every change reloads the frame. `sandbox=""` stops scripts, forms and popups; `htmlPreview` adds a CSP meta that blocks all network loads (tracking pixels in pasted email) and `<base target="_blank">`. Keep both.
   - `tools/UuidTool.jsx`: UUID. Version + Count + Generate toolbar over one read-only panel (`.io.single`), filled by `uuids`.
-  - `tools.js` holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `splitSame`, `jsonLines`, `linesText`, `normalizeJson`, `decodeJwt`, `jwtTimeNotes`, `base64Encode`/`base64Decode`, `urlEncode`/`urlDecode`, `jsonStatus`/`errorLocation`, `repairJson` (the status bar's Fix JSON), `formatHtml`/`htmlPreview`, `qrSvg`, `uuids`, `findAll`, `formatSize`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
+  - `tools.js` holds all logic as pure string functions with no DOM: `textToJson`, `jsonToText`, `minify`, `diffBlocks`, `applyCopy`, `splitSame`, `jsonLines`, `linesText`, `normalizeJson`, `decodeJwt`, `jwtTimeNotes`, `base64Encode`/`base64Decode`, `urlEncode`/`urlDecode`, `hexEncode`/`hexDecode`, `htmlEscape`/`htmlUnescape`, `unicodeEscape`/`unicodeUnescape`, `jsonStatus`/`errorLocation`, `repairJson` (the status bar's Fix JSON), `formatHtml`/`htmlPreview`, `qrSvg`, `uuids`, `lineTool`, `describeTime`, `hash` (async), `regexMatches`/`regexReplace`, `jsonToCsv`/`csvToJson`, `jsonToTs`, `yamlToJson`/`jsonToYaml` (take the js-yaml module as an argument; the component imports it lazily), `jsonQuery` (same, with jsonpath-plus; keep `eval: 'safe'`), `findAll`, `formatSize`. Invalid input makes them throw `Error`, and empty or whitespace-only input returns `''`. Any new tool logic goes here, with tests in `tools.test.js`.
 - **Text goes through `textStore`.**
   - Editable textareas are controlled: their value is `useText(id)` and `onChange` calls `textStore.set`.
   - Never `t.value = …` plus a synthetic input event: React ignores it, so go through `textStore.set`.
@@ -48,8 +48,9 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - Send to writes the target id with `textStore.set` and switches the hash.
 - **Tools render their own `<section data-tab="...">` and toolbar.** `App.jsx` passes `hidden`. `SearchBox` goes at the end of the toolbar and gets `sectionRef`, `hidden` and a `version` that changes when the tool's output changes.
   - Adding a one-in, one-out tool: a `TransformTool` wrapper with its ids and function, an entry in `NAV` (`src/useHashTab.js`) and in `TOOLS` (`App.jsx`), the input id in `EDITABLE_IDS`, and a sample.
-  - Panels whose input is JSON show parse errors in the status bar, so the tool's `.err` line stays empty for them.
+  - Panels whose input is JSON show parse errors in the status bar, so the tool's `.err` line skips JSON syntax errors (a `SyntaxError` naming JSON) for them. Every other error (an item CSV can't hold, a bad query path) still goes to `.err`.
   - Every tool call is wrapped in try/catch, and the message goes to the `.err` line.
+  - A hidden `TransformTool` doesn't call its function (all tools are on the page at once); it runs when shown. Don't add per-tool `hidden` checks.
   - Disabled states are computed in render from the text; nothing has to refresh them.
 - **Status bar:** read-only JSON panels hold the tool's own `JSON.stringify` output, so they show ✓ without parsing it again. The text it checks is debounced inside `StatusBar`, so typing in one panel never re-checks another; keep it that way, or a big broken JSON on one tab stalls typing on all of them. Fix JSON tries `repairJson` up front only for text up to 1 MB (`MAX_TRY_FIX`); above that it runs on click.
 - **Search** (`SearchBox.jsx`):
@@ -64,7 +65,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - Don't toggle classes by hand on nodes whose `className` React renders from state (`.node`, `.change`, `.inputs`); the next render overwrites them. The only hand-toggled classes are `.dropping` on `.editor` and `.flashing` on a button, whose `className` never changes.
   - No `innerHTML` / `dangerouslySetInnerHTML`. User text is only ever a JSX text child or a DOM text node.
   - Every element id and class name matches the pre-React app; CSS and tests depend on them.
-- **Storage:** `tjt:settings` (`{ remember }`), `tjt:theme`, `tjt:text:<textarea id>`. Every access goes through `store`. An inline script in `index.html`'s `<head>` applies the theme before first paint. Ids in `PRIVATE_IDS` (the JWT, QR and Encode/Decode input boxes, rendered with `data-private`) are never written to storage, whatever the "remember" setting says, and any text an older version saved for them is deleted on load. Add any box that may hold secrets there.
+- **Storage:** `tjt:settings` (`{ remember }`), `tjt:theme`, `tjt:pins` (pinned tab ids, at most 6), `tjt:text:<textarea id>`. Every access goes through `store`. An inline script in `index.html`'s `<head>` applies the theme before first paint. Ids in `PRIVATE_IDS` (the JWT, QR, Encode/Decode and Hash input boxes, rendered with `data-private`) are never written to storage, whatever the "remember" setting says, and any text an older version saved for them is deleted on load. Add any box that may hold secrets there.
 - **Tests** (Vitest + jsdom + Testing Library, next to the code as `*.test.js(x)`):
   - jsdom has no `ResizeObserver` and no `scrollIntoView`. Tests that render Compare, search, or the whole `App` stub them: `vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })` and `Element.prototype.scrollIntoView = () => {}` (restore both in `afterEach`).
   - Reset the store in `afterEach` (`textStore.set(id, '')`), because it is module state shared by the tests in a file.

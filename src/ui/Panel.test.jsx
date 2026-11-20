@@ -90,3 +90,19 @@ test('status message drops the V8 snippet, also when it is cut at both ends', ()
   expect(tidy(`Unexpected token ',', ..."b": [1, 2,]" is not valid JSON`)).toBe("Unexpected token ','");
   expect(tidy(`Unexpected token ',', ..."  "name": ,,BROKEN"i"... is not valid JSON`)).toBe("Unexpected token ','");
 });
+
+test('Send to reaches the newer tools', () => {
+  render(<Panel id="fmt-out" label="Pretty" ext="json" tab="format" readOnly value='{"a":1}' />);
+  const opts = [...screen.getByRole('combobox', { name: 'Send this result to another tool' }).options].map(o => o.textContent);
+  for (const t of ['JSON Query', 'JSON ⇄ CSV', 'JSON → TypeScript', 'YAML ⇄ JSON', 'Line Tools', 'Regex Tester']) expect(opts).toContain(t);
+});
+
+test('download names have no stray dashes', () => {
+  const names = [];
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () { names.push(this.download); });
+  Object.assign(URL, { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} });
+  render(<Panel id="hash-out" label="Hash (hex)" ext="txt" tab="hash" readOnly value="ab" />);
+  fireEvent.click(btn('Download'));
+  expect(names).toEqual(['hash-hex.txt']);
+  vi.restoreAllMocks();
+});

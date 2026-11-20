@@ -10,6 +10,8 @@ const SAMPLE_JWT = [
 const PERSON = { name: 'Ann Nguyen', age: 31, active: true, email: 'ann@example.com', tags: ['dev', 'ops'], address: { city: 'Hanoi', geo: { lat: 21.03, lng: 105.85 } }, manager: null };
 const CONFIG_A = 'server:\n  host: example.com\n  port: 8080\n  timeout: 30\nlogging:\n  level: info\n  file: app.log\nfeatures:\n  - search\n  - export\n';
 const CONFIG_B = 'server:\n  host: example.com\n  port: 9090\n  timeout: 30\n  retries: 3\nlogging:\n  level: debug\n  file: app.log\nfeatures:\n  - search\n  - export\n  - share\n';
+// JSON ⇄ CSV in CSV → JSON mode: the csv-in sample below is JSON.
+export const CSV_SAMPLE = 'name,city,zip,note\nAnn Nguyen,Hanoi,100000,"Likes ""quotes"", commas"\nBo Tran,Hue,007,\n';
 // textarea id -> text, or { left, right } to fill both Compare sides.
 export const SAMPLES = {
   'fmt-in': JSON.stringify(PERSON),
@@ -19,6 +21,14 @@ export const SAMPLES = {
   'html-in': '<!DOCTYPE html><html><head><title>Profile</title><style>body{font-family:sans-serif;margin:2em}.tag{background:#eef;padding:2px 6px;border-radius:4px}</style></head><body><h1>Ann Nguyen</h1><p>Developer in <b>Hanoi</b>.</p><ul><li><span class="tag">dev</span></li><li><span class="tag">ops</span></li></ul><a href="mailto:ann@example.com">Email Ann</a></body></html>',
   'jwt-in': SAMPLE_JWT,
   'enc-in': 'Xin chào, thế giới! name=Ann Nguyen&tags=dev,ops',
+  'lines-in': 'banana\nitem10\nApple\nitem2\nbanana\n  cherry  \n\nitem1\n',
+  'time-in': String(nowSec),
+  'hash-in': 'Xin chào, thế giới!',
+  're-in': 'Ann Nguyen <ann@example.com>\nBo Tran <bo.tran@mail.example.org>\nno email here\nsupport@example.com',
+  'csv-in': JSON.stringify([{ name: 'Ann Nguyen', city: 'Hanoi', tags: ['dev', 'ops'], note: 'Likes "quotes", commas' }, { name: 'Bo Tran', city: 'Hue', zip: '007' }], null, 2),
+  'ts-in': JSON.stringify({ ...PERSON, projects: [{ id: 1, name: 'Search', done: true }, { id: 2, name: 'Export', due: '2026-12-01' }] }, null, 2),
+  'yaml-in': CONFIG_A,
+  'query-in': JSON.stringify({ ...PERSON, orders: [{ id: 1, item: 'Pen', price: 2.5 }, { id: 2, item: 'Lamp', price: 30 }, { id: 3, item: 'Ink', price: 8 }] }, null, 2),
   'qr-in': 'https://example.com/?name=Ann Nguyễn',
   left: { left: CONFIG_A, right: CONFIG_B },
   right: { left: CONFIG_A, right: CONFIG_B },
