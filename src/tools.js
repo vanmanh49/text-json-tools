@@ -508,3 +508,29 @@ export function describeTime(s, now = Date.now()) {
     ['Relative', Math.abs(d) < 1 ? 'now' : d < 0 ? `${span(-d)} ago` : `in ${span(d)}`],
   ].map(([k, v]) => k.padEnd(14) + v).join('\n');
 }
+
+export const MAX_MATCHES = 1000;
+
+// { count, matches } as pretty JSON: every match is counted, the first MAX_MATCHES are listed with their groups.
+// Without the g flag only the first match is taken, as in JS. Bad patterns and flags throw.
+// shortcut: a catastrophically backtracking pattern hangs the tab (same as findAll); move matching to a Worker with a timeout if users hit it.
+export function regexMatches(text, pattern, flags) {
+  if (!text || !pattern) return '';
+  const re = new RegExp(pattern, flags);
+  const found = re.global ? text.matchAll(re) : [re.exec(text)].filter(Boolean);
+  const matches = [];
+  let count = 0;
+  for (const m of found) {
+    if (count++ >= MAX_MATCHES) continue;
+    const item = { match: m[0], index: m.index };
+    if (m.length > 1) item.groups = m.slice(1).map(g => g ?? null);
+    if (m.groups) item.named = Object.fromEntries(Object.entries(m.groups).map(([k, v]) => [k, v ?? null]));
+    matches.push(item);
+  }
+  return JSON.stringify({ count, matches }, null, 2);
+}
+
+export function regexReplace(text, pattern, flags, replacement) {
+  if (!text || !pattern) return '';
+  return text.replace(new RegExp(pattern, flags), replacement);
+}

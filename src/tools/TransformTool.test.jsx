@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import TransformTool, { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp } from './TransformTool.jsx';
+import TransformTool, { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp, Regex } from './TransformTool.jsx';
 import { textStore } from '../textStore.js';
 import { SAMPLES } from '../samples.js';
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
   cleanup();
-  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in']) textStore.set(id, '');
+  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in', 're-in']) textStore.set(id, '');
 });
 
 const err = c => c.querySelector('.err').textContent;
@@ -83,4 +83,17 @@ test('async output ignores a stale result and shows a rejection', async () => {
   await act(async () => pending.c.rej(new Error('boom')));
   expect(err(container)).toBe('boom');
   expect(container.querySelector('#t-out').value).toBe('');
+});
+
+test('regex tester shows matches, then the replaced text', () => {
+  const { container } = render(<Regex />);
+  act(() => textStore.set('re-in', 'a1 b22'));
+  fireEvent.change(container.querySelector('#re-pattern'), { target: { value: '\\d+' } });
+  expect(JSON.parse(container.querySelector('#re-out').value).count).toBe(2);
+  expect(container.querySelector('#re-replace')).toBeNull();
+  fireEvent.change(container.querySelector('#re-show'), { target: { value: 'replace' } });
+  fireEvent.change(container.querySelector('#re-replace'), { target: { value: '#' } });
+  expect(container.querySelector('#re-out').value).toBe('a# b#');
+  fireEvent.change(container.querySelector('#re-pattern'), { target: { value: '(' } });
+  expect(err(container)).toMatch(/Invalid regular expression/);
 });

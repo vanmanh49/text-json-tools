@@ -22,6 +22,7 @@ export const SAMPLES = {
   'lines-in': 'banana\nitem10\nApple\nitem2\nbanana\n  cherry  \n\nitem1\n',
   'time-in': String(nowSec),
   'hash-in': 'Xin chào, thế giới!',
+  're-in': 'Ann Nguyen <ann@example.com>\nBo Tran <bo.tran@mail.example.org>\nno email here\nsupport@example.com',
   'qr-in': 'https://example.com/?name=Ann Nguyễn',
   left: { left: CONFIG_A, right: CONFIG_B },
   right: { left: CONFIG_A, right: CONFIG_B },

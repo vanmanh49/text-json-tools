@@ -144,7 +144,7 @@ button:disabled, select:disabled, input:disabled { opacity: 0.4; cursor: default
 }
 .icon-btn:hover:not(:disabled) { color: var(--text); }
 .icon-btn svg { flex: none; }
-select, input[type="search"], input[type="number"] {
+select, input[type="search"], input[type="number"], input[type="text"] {
   font: inherit; font-size: 0.875rem; padding: 5px 8px; color: var(--text); background: var(--panel);
   border: 1px solid var(--border); border-radius: 6px;
 }
@@ -194,6 +194,10 @@ button.link:hover:not(:disabled) { background: none; }
 .toolbar + .io { margin-top: 2px; }
 .io.single { grid-template-columns: 1fr; }
 #uuid-count { width: 5.5em; }
+.toolbar input.code { font-family: var(--mono); }
+#re-pattern { width: 18em; }
+#re-flags { width: 4em; }
+#re-replace { width: 12em; }
 .panel {
   display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden;
   background: var(--panel); border: 1px solid var(--border); border-radius: 10px;

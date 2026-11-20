@@ -1,6 +1,6 @@
 import { test, vi } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS, regexMatches, regexReplace, MAX_MATCHES } from './tools.js';
 import jsQR from 'jsqr';
 
 test('textToJson unescapes a quoted string', () => {
@@ -497,4 +497,37 @@ test('hash handles emoji as UTF-8 and empty input as empty', async () => {
 test('hash explains a missing crypto.subtle', async () => {
   vi.stubGlobal('crypto', {});
   try { await assert.rejects(hash('x'), /https/); } finally { vi.unstubAllGlobals(); }
+});
+
+test('regexMatches lists matches with numbered and named groups', () => {
+  assert.deepEqual(JSON.parse(regexMatches('ann@x.com, bo@y.org', '(\\w+)@(?<host>[\\w.]+)', 'g')), {
+    count: 2,
+    matches: [
+      { match: 'ann@x.com', index: 0, groups: ['ann', 'x.com'], named: { host: 'x.com' } },
+      { match: 'bo@y.org', index: 11, groups: ['bo', 'y.org'], named: { host: 'y.org' } },
+    ],
+  });
+});
+test('regexMatches takes only the first match without g and keeps empty matches with it', () => {
+  assert.equal(JSON.parse(regexMatches('ann@x.com, bo@y.org', '\\w+@', '')).count, 1);
+  assert.equal(JSON.parse(regexMatches('ab', 'x*', 'g')).count, 3);
+  assert.deepEqual(JSON.parse(regexMatches('a', '(b)?a', 'g')).matches[0].groups, [null]);
+  assert.deepEqual(JSON.parse(regexMatches('a', 'a', 'g')).matches[0], { match: 'a', index: 0 });
+});
+test('regexMatches counts every match but lists at most MAX_MATCHES', () => {
+  const r = JSON.parse(regexMatches('a'.repeat(1500), 'a', 'g'));
+  assert.equal(MAX_MATCHES, 1000);
+  assert.equal(r.count, 1500);
+  assert.equal(r.matches.length, 1000);
+});
+test('regexMatches throws on a bad pattern or flags, and is empty for empty input', () => {
+  assert.throws(() => regexMatches('a', '(', 'g'));
+  assert.throws(() => regexMatches('a', 'a', 'q'));
+  assert.equal(regexMatches('', 'a', 'g'), '');
+  assert.equal(regexMatches('a', '', 'g'), '');
+});
+test('regexReplace uses JS replacement patterns', () => {
+  assert.equal(regexReplace('ann@x.com', '(\\w+)@(?<h>\\w+)', 'g', '$<h>:$1'), 'x:ann.com');
+  assert.equal(regexReplace('a1b2', '\\d', 'g', ''), 'ab');
+  assert.equal(regexReplace('a1b2', '\\d', '', '#'), 'a#b2');
 });

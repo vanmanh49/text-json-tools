@@ -3,7 +3,7 @@ import Panel from '../ui/Panel.jsx';
 import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
 import { setText } from '../setText.js';
-import { HASH_ALGOS, LINE_OPS, base64Decode, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
+import { HASH_ALGOS, LINE_OPS, base64Decode, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
 
 // One input panel, one output panel, and the tool's function between them.
 export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
@@ -143,5 +143,38 @@ export function Hash({ hidden }) {
   return (
     <TransformTool tab="hash" hidden={hidden} desc="SHA-1, SHA-256, SHA-384 or SHA-512 hash of text, as UTF-8, computed in your browser. Text in this box is never saved."
       inId="hash-in" inLabel="Text" inExt="txt" outId="hash-out" outLabel="Hash (hex)" outExt="txt" fn={fn} toolbar={toolbar} />
+  );
+}
+
+export function Regex({ hidden }) {
+  const [pattern, setPattern] = useState('');
+  const [flags, setFlags] = useState('g');
+  const [show, setShow] = useState('matches');
+  const [replacement, setReplacement] = useState('');
+  const fn = useCallback(s => (show === 'matches' ? regexMatches(s, pattern, flags) : regexReplace(s, pattern, flags, replacement)), [pattern, flags, show, replacement]);
+  const toolbar = (
+    <>
+      <label className="inline">Pattern
+        <input type="text" id="re-pattern" className="code" spellCheck={false} autoComplete="off" value={pattern} onChange={e => setPattern(e.target.value)} />
+      </label>
+      <label className="inline">Flags
+        <input type="text" id="re-flags" className="code" spellCheck={false} autoComplete="off" value={flags} onChange={e => setFlags(e.target.value)} />
+      </label>
+      <label className="inline">Show
+        <select id="re-show" value={show} onChange={e => setShow(e.target.value)}>
+          <option value="matches">Matches</option>
+          <option value="replace">Replace</option>
+        </select>
+      </label>
+      {show === 'replace' && (
+        <label className="inline">With
+          <input type="text" id="re-replace" className="code" spellCheck={false} autoComplete="off" value={replacement} onChange={e => setReplacement(e.target.value)} />
+        </label>
+      )}
+    </>
+  );
+  return (
+    <TransformTool tab="regex" hidden={hidden} desc="Test a JavaScript regular expression: see each match and its groups, or the text after a replace ($1 and $<name> insert groups)."
+      inId="re-in" inLabel="Text" inExt="txt" outId="re-out" outLabel={show === 'matches' ? 'Matches' : 'Replaced text'} outExt={show === 'matches' ? 'json' : 'txt'} fn={fn} toolbar={toolbar} />
   );
 }

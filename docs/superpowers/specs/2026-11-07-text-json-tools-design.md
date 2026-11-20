@@ -12,7 +12,7 @@ A public, static website of browser-only utilities. The first five:
 3. **JSON Minify**: minify formatted JSON to one line.
 4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
 
-Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp and Hash (thirteen tools in all).
+Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp, Hash and Regex Tester (fourteen tools in all).
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
 
@@ -134,6 +134,10 @@ Empty input to the three JSON tools returns `''` without an error.
   - `hash(s, algo)` is async: the lowercase hex `crypto.subtle.digest` of the UTF-8 bytes. Whitespace is hashed like any text; only empty input gives empty output. Without `crypto.subtle` (a plain-http page) it says the page must be opened over https.
   - MD5 (not in `crypto.subtle`) and HMAC are not offered.
   - The Text box has `data-private` (it may hold passwords), so it is never written to browser storage.
+- **Regex Tester (`#regex`):** Pattern and Flags boxes (Flags `g` by default) and a Show picker (Matches / Replace, with a "With" box for Replace) over a Text panel → Matches or Replaced text panel. The boxes are not saved.
+  - `regexMatches(text, pattern, flags)` gives `{ count, matches }` as pretty JSON: every match is counted, the first 1000 (`MAX_MATCHES`) are listed as `{ match, index }` plus `groups` (numbered, unmatched → `null`) and `named` when the pattern has them. Empty matches are included. Without `g` only the first match is taken, as in JavaScript.
+  - `regexReplace(text, pattern, flags, replacement)` is `String.prototype.replace`, so `$1`, `$<name>` and `$&` work.
+  - A bad pattern or flag shows the browser's message on the error line. Empty text or pattern gives empty output. Known limit: a catastrophically backtracking pattern can hang the tab, as in search.
 - **Async tools:** a `TransformTool` function may return a promise. The output is empty until it settles, and a result for text that has since changed is dropped, so a slow old result never replaces a newer one. A rejection's message goes to the error line.
 - **Compare as JSON:** a checkbox in the Compare toolbar.
   - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.
