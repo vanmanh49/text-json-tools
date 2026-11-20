@@ -391,7 +391,7 @@ export function uuids(count, version = 4, now = Date.now()) {
     }
     b[6] = (b[6] & 0x0f) | (version << 4);
     b[8] = (b[8] & 0x3f) | 0x80; // RFC 9562 variant
-    const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+    const h = toHex(b);
     return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
   });
   // A v7 batch shares one millisecond; sorting makes it ascend like a counter would.
@@ -463,7 +463,8 @@ export const LINE_OPS = [
   ['sort', 'Sort A → Z'], ['sort-desc', 'Sort Z → A'], ['unique', 'Remove duplicates'], ['reverse', 'Reverse order'],
   ['trim', 'Trim spaces'], ['no-empty', 'Remove empty lines'], ['upper', 'UPPERCASE'], ['lower', 'lowercase'],
 ];
-const byText = (a, b) => a.localeCompare(b, undefined, { numeric: true }); // natural: item2 before item10
+// natural: item2 before item10. One collator: localeCompare with options builds a new one per call (~14x slower).
+const byText = new Intl.Collator(undefined, { numeric: true }).compare;
 const LINE_FNS = {
   sort: l => l.sort(byText), 'sort-desc': l => l.sort(byText).reverse(), unique: l => [...new Set(l)], reverse: l => l.reverse(),
   trim: l => l.map(x => x.trim()), 'no-empty': l => l.filter(x => x.trim()), upper: l => l.map(x => x.toUpperCase()), lower: l => l.map(x => x.toLowerCase()),
@@ -634,8 +635,8 @@ const pascal = key => {
     .map(w => w[0].toUpperCase() + w.slice(1)).join('') || 'Item';
   return /^\p{N}/u.test(name) ? 'T' + name : name;
 };
-// users → User, categories → Category, data → DataItem
-const singular = name => (/ies$/.test(name) ? name.slice(0, -3) + 'y' : /[^s]s$/.test(name) ? name.slice(0, -1) : name + 'Item');
+// users → User, categories → Category, data → DataItem, status → StatusItem
+const singular = name => (/ies$/.test(name) ? name.slice(0, -3) + 'y' : /[^su]s$/.test(name) ? name.slice(0, -1) : name + 'Item'); // status → StatusItem
 
 export function jsonToTs(s) {
   if (!s.trim()) return '';

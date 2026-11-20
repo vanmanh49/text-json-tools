@@ -651,3 +651,17 @@ test('describeTime reads a date with no time as local midnight, as it says', () 
     if (tz === undefined) delete process.env.TZ; else process.env.TZ = tz;
   }
 });
+
+test('lineTool sorts 50,000 lines quickly', () => {
+  const lines = Array.from({ length: 50000 }, (_, i) => `row ${(i * 7919) % 50000} item${i}`);
+  const t = performance.now();
+  const out = lineTool(lines.join('\n'), 'sort').split('\n');
+  assert.ok(performance.now() - t < 1000, 'sorting took over 1 s');
+  assert.equal(out[0], 'row 0 item0');
+  assert.equal(out.at(-1), 'row 49999 item32321');
+});
+test('jsonToTs does not cut the s off words ending in -us', () => {
+  const t = jsonToTs('{"status":[{"a":1}],"bus":[{"b":1}]}');
+  assert.match(t, /status: StatusItem\[\];/);
+  assert.match(t, /bus: BusItem\[\];/);
+});

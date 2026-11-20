@@ -10,6 +10,8 @@ const SAMPLE_JWT = [
 const PERSON = { name: 'Ann Nguyen', age: 31, active: true, email: 'ann@example.com', tags: ['dev', 'ops'], address: { city: 'Hanoi', geo: { lat: 21.03, lng: 105.85 } }, manager: null };
 const CONFIG_A = 'server:\n  host: example.com\n  port: 8080\n  timeout: 30\nlogging:\n  level: info\n  file: app.log\nfeatures:\n  - search\n  - export\n';
 const CONFIG_B = 'server:\n  host: example.com\n  port: 9090\n  timeout: 30\n  retries: 3\nlogging:\n  level: debug\n  file: app.log\nfeatures:\n  - search\n  - export\n  - share\n';
+// JSON ⇄ CSV in CSV → JSON mode: the csv-in sample below is JSON.
+export const CSV_SAMPLE = 'name,city,zip,note\nAnn Nguyen,Hanoi,100000,"Likes ""quotes"", commas"\nBo Tran,Hue,007,\n';
 // textarea id -> text, or { left, right } to fill both Compare sides.
 export const SAMPLES = {
   'fmt-in': JSON.stringify(PERSON),

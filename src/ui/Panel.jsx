@@ -15,7 +15,14 @@ const SEND_TO = [ // [label, tab, textarea id]
   ['HTML Format', 'html', 'html-in'],
   ['Compare (left)', 'compare', 'left'],
   ['Compare (right)', 'compare', 'right'],
+  ['JSON Query', 'query', 'query-in'],
+  ['JSON ⇄ CSV', 'csv', 'csv-in'],
+  ['JSON → TypeScript', 'ts', 'ts-in'],
+  ['YAML ⇄ JSON', 'yaml', 'yaml-in'],
+  ['Line Tools', 'lines', 'lines-in'],
+  ['Regex Tester', 'regex', 're-in'],
   ['Encode / Decode', 'encode', 'enc-in'],
+  ['Hash', 'hash', 'hash-in'],
   ['QR Code', 'qr', 'qr-in'],
 ];
 
@@ -45,13 +52,13 @@ function download(text, name) {
 
 // Editable: text lives in the store (`id`). Read-only or with `children` (Pretty view): `value` is the text.
 // useAsInput: a read-only panel's button that moves its text into that textarea id (chaining, e.g. Line Tools).
-export default function Panel({ id, label, labelId, ext, tab, readOnly, value, className, onErr, useAsInput, children }) {
+export default function Panel({ id, label, labelId, ext, tab, readOnly, value, className, onErr, useAsInput, sample: sampleFor, children }) {
   const stored = useText(id);
   const ta = useRef(null);
   const editable = !readOnly && !children;
   const text = editable ? stored : value ?? '';
-  const name = `${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.${ext}`; // e.g. one-line-json.json
-  const sample = editable && SAMPLES[id];
+  const name = `${label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.${ext}`; // e.g. one-line-json.json, hash-hex.txt
+  const sample = editable && (sampleFor ?? SAMPLES[id]); // a tool may pass its own, e.g. CSV in CSV → JSON mode
 
   const copy = async e => {
     const b = e.currentTarget;

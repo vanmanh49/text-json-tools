@@ -3,19 +3,23 @@ import Panel from '../ui/Panel.jsx';
 import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
 import { setText } from '../setText.js';
+import { CSV_SAMPLE } from '../samples.js';
 import { CSV_DELIMS, HASH_ALGOS, LINE_OPS, base64Decode, csvToJson, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, jsonToCsv, jsonToTs, jsonToYaml, htmlEscape, htmlUnescape, jsonToText, jsonQuery, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode, yamlToJson } from '../tools.js';
 
 // JSON.parse's SyntaxError names JSON in every browser ("…is not valid JSON", "JSON.parse: …", "JSON Parse error: …").
 const failed = e => ({ out: '', error: e.message, jsonSyntax: e instanceof SyntaxError && /JSON/.test(e.message) });
 
 // One input panel, one output panel, and the tool's function between them.
-export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below, chain }) {
+export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, inSample, fn, toolbar, below, chain }) {
   const input = useText(inId);
   const section = useRef(null);
   const [panelErr, setPanelErr] = useState(''); // clipboard, drop and fix messages from the panels
+  // Every tool is on the page, hidden but one: a hidden tool waits until it is shown (saved big text would
+  // otherwise be processed on every page load, and the YAML / Query libraries loaded for nobody).
   const sync = useMemo(() => {
+    if (hidden) return { out: '', error: '' };
     try { return { out: fn(input), error: '' }; } catch (e) { return failed(e); }
-  }, [fn, input]);
+  }, [fn, input, hidden]);
   // An async fn returns a promise: show its result only while it is still the latest one.
   const promise = typeof sync.out?.then === 'function' ? sync.out : null;
   const [settled, setSettled] = useState(null);
@@ -35,7 +39,7 @@ export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt,
       <p className="desc">{desc}</p>
       <div className="toolbar">{toolbar}<SearchBox sectionRef={section} version={result.out} hidden={hidden} /></div>
       <div className="io">
-        <Panel id={inId} label={inLabel} ext={inExt} tab={tab} className="in" onErr={setPanelErr} />
+        <Panel id={inId} label={inLabel} ext={inExt} tab={tab} className="in" onErr={setPanelErr} sample={inSample} />
         <Panel id={outId} label={outLabel} ext={outExt} tab={tab} className="out" readOnly value={result.out} useAsInput={chain ? inId : undefined} />
       </div>
       {below}
@@ -205,7 +209,7 @@ export function Csv({ hidden }) {
   );
   return (
     <TransformTool tab="csv" hidden={hidden} desc="Turn a JSON array into CSV, or CSV with a header row into JSON. CSV values stay text, so 007 keeps its zeros."
-      inId="csv-in" inLabel={toCsv ? 'JSON' : 'CSV'} inExt={toCsv ? 'json' : 'csv'} outId="csv-out" outLabel={toCsv ? 'CSV' : 'JSON'} outExt={toCsv ? 'csv' : 'json'} fn={fn} toolbar={toolbar} />
+      inId="csv-in" inSample={toCsv ? undefined : CSV_SAMPLE} inLabel={toCsv ? 'JSON' : 'CSV'} inExt={toCsv ? 'json' : 'csv'} outId="csv-out" outLabel={toCsv ? 'CSV' : 'JSON'} outExt={toCsv ? 'csv' : 'json'} fn={fn} toolbar={toolbar} />
   );
 }
 
@@ -217,8 +221,8 @@ export const JsonToTs = ({ hidden }) => (
 export function Yaml({ hidden }) {
   const [dir, setDir] = useState('yaml-to-json');
   const toJson = dir === 'yaml-to-json';
-  // js-yaml is its own chunk: load it only for text on a visible tab (every tool renders, hidden, at page load).
-  const fn = useCallback(s => (hidden || !s.trim() ? '' : import('js-yaml').then(yaml => (toJson ? yamlToJson : jsonToYaml)(s, yaml))), [toJson, hidden]);
+  // js-yaml is its own chunk, loaded on first use (TransformTool doesn't run a hidden tool).
+  const fn = useCallback(s => (!s.trim() ? '' : import('js-yaml').then(yaml => (toJson ? yamlToJson : jsonToYaml)(s, yaml))), [toJson]);
   const toolbar = (
     <label className="inline">Convert
       <select id="yaml-dir" value={dir} onChange={e => setDir(e.target.value)}>
@@ -235,8 +239,8 @@ export function Yaml({ hidden }) {
 
 export function Query({ hidden }) {
   const [path, setPath] = useState('$');
-  // jsonpath-plus is its own chunk, loaded only for a visible tab with text (see Yaml).
-  const fn = useCallback(s => (hidden || !s.trim() ? '' : import('jsonpath-plus').then(m => jsonQuery(s, path, m.JSONPath))), [path, hidden]);
+  // jsonpath-plus is its own chunk, loaded on first use.
+  const fn = useCallback(s => (!s.trim() ? '' : import('jsonpath-plus').then(m => jsonQuery(s, path, m.JSONPath))), [path]);
   const toolbar = (
     <label className="inline">Path
       <input type="text" id="query-path" className="code" spellCheck={false} autoComplete="off" value={path} onChange={e => setPath(e.target.value)} />

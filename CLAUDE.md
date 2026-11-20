@@ -50,6 +50,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
   - Adding a one-in, one-out tool: a `TransformTool` wrapper with its ids and function, an entry in `NAV` (`src/useHashTab.js`) and in `TOOLS` (`App.jsx`), the input id in `EDITABLE_IDS`, and a sample.
   - Panels whose input is JSON show parse errors in the status bar, so the tool's `.err` line skips JSON syntax errors (a `SyntaxError` naming JSON) for them. Every other error (an item CSV can't hold, a bad query path) still goes to `.err`.
   - Every tool call is wrapped in try/catch, and the message goes to the `.err` line.
+  - A hidden `TransformTool` doesn't call its function (all tools are on the page at once); it runs when shown. Don't add per-tool `hidden` checks.
   - Disabled states are computed in render from the text; nothing has to refresh them.
 - **Status bar:** read-only JSON panels hold the tool's own `JSON.stringify` output, so they show ✓ without parsing it again. The text it checks is debounced inside `StatusBar`, so typing in one panel never re-checks another; keep it that way, or a big broken JSON on one tab stalls typing on all of them. Fix JSON tries `repairJson` up front only for text up to 1 MB (`MAX_TRY_FIX`); above that it runs on click.
 - **Search** (`SearchBox.jsx`):

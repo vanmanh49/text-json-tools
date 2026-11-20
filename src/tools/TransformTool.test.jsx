@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TransformTool, { Lines, TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp, Regex, Csv, Yaml, Query } from './TransformTool.jsx';
 import { textStore } from '../textStore.js';
@@ -148,4 +148,21 @@ test('line tools can use the result as the next input', () => {
   fireEvent.change(container.querySelector('#lines-mode'), { target: { value: 'unique' } });
   expect(container.querySelector('#lines-out').value).toBe('a\nb');
   expect(container.querySelector('.in').closest('.panel').querySelector('button[aria-label="Use as input"]')).toBeNull();
+});
+
+test('a hidden tool does not compute until it is shown', () => {
+  const fn = vi.fn(s => s.toUpperCase());
+  textStore.set('lines-in', 'abc');
+  const { container, rerender } = render(<TransformTool tab="t" hidden inId="lines-in" inLabel="In" inExt="txt" outId="t-out" outLabel="Out" outExt="txt" fn={fn} />);
+  expect(fn).not.toHaveBeenCalled();
+  rerender(<TransformTool tab="t" hidden={false} inId="lines-in" inLabel="In" inExt="txt" outId="t-out" outLabel="Out" outExt="txt" fn={fn} />);
+  expect(container.querySelector('#t-out').value).toBe('ABC');
+});
+
+test('the CSV sample matches the direction', () => {
+  const { container } = render(<Csv />);
+  fireEvent.change(container.querySelector('#csv-dir'), { target: { value: 'csv-to-json' } });
+  act(() => fireEvent.click(screen.getByRole('button', { name: 'Try a sample' })));
+  expect(Array.isArray(JSON.parse(container.querySelector('#csv-out').value))).toBe(true);
+  expect(err(container)).toBe('');
 });
