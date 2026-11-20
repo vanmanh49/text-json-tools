@@ -1,6 +1,6 @@
 import { test, vi } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS, regexMatches, regexReplace, MAX_MATCHES } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS, regexMatches, regexReplace, MAX_MATCHES, jsonToCsv, csvToJson, CSV_DELIMS } from './tools.js';
 import jsQR from 'jsqr';
 
 test('textToJson unescapes a quoted string', () => {
@@ -16,7 +16,7 @@ test('textToJson throws on invalid input', () => {
   assert.throws(() => textToJson('nope'));
 });
 test('empty or whitespace-only input returns empty string', () => {
-  for (const f of [textToJson, jsonToText, minify, s => lineTool(s, 'sort'), describeTime]) {
+  for (const f of [textToJson, jsonToText, minify, s => lineTool(s, 'sort'), describeTime, jsonToCsv, csvToJson]) {
     assert.equal(f(''), '');
     assert.equal(f('  \n\t '), '');
   }
@@ -530,4 +530,33 @@ test('regexReplace uses JS replacement patterns', () => {
   assert.equal(regexReplace('ann@x.com', '(\\w+)@(?<h>\\w+)', 'g', '$<h>:$1'), 'x:ann.com');
   assert.equal(regexReplace('a1b2', '\\d', 'g', ''), 'ab');
   assert.equal(regexReplace('a1b2', '\\d', '', '#'), 'a#b2');
+});
+
+test('jsonToCsv writes a header from all keys and quotes where needed', () => {
+  assert.equal(jsonToCsv('[{"a":1,"b":"x,y"},{"b":"say \\"hi\\"","c":null,"d":{"e":[1]}}]'), 'a,b,c,d\n1,"x,y",,\n,"say ""hi""",,"{""e"":[1]}"');
+});
+test('JSON → CSV → JSON keeps delimiters, quotes, newlines, CRLF and edge spaces', () => {
+  const rows = [{ name: 'a,b', note: 'line1\r\nline2', q: '"x"', sp: ' pad ', semi: 'a;b', tab: 'a\tb' }];
+  for (const [d] of CSV_DELIMS) assert.deepEqual(JSON.parse(csvToJson(jsonToCsv(JSON.stringify(rows), d), d)), rows);
+});
+test('csvToJson strips a BOM, names blank headers, skips blank lines and pads short rows', () => {
+  assert.deepEqual(JSON.parse(csvToJson('﻿a,,a2\r\n1,2\r\n\r\n3\r\n')), [{ a: '1', column2: '2', a2: '' }, { a: '3', column2: '', a2: '' }]);
+});
+test('csvToJson rejects repeated headers, long rows and unclosed quotes', () => {
+  assert.throws(() => csvToJson('a,a\n1,2'), /appears twice/);
+  assert.throws(() => csvToJson('a\n1,2'), /Row 2 has 2 fields/);
+  assert.throws(() => csvToJson('a\n"1'), /Row 2 has a quote that never closes/);
+});
+test('csvToJson keeps values as text and a stray quote as written', () => {
+  assert.deepEqual(JSON.parse(csvToJson('id;n\n007;a"b', ';')), [{ id: '007', n: 'a"b' }]);
+});
+test('jsonToCsv handles arrays of arrays, primitives and a single object', () => {
+  assert.equal(jsonToCsv('[[1,2],[3]]'), '1,2\n3');
+  assert.equal(jsonToCsv('["x","y"]'), 'value\nx\ny');
+  assert.equal(jsonToCsv('{"a":1}'), 'a\n1');
+  assert.equal(jsonToCsv('[]'), '');
+});
+test('jsonToCsv rejects mixed items and top-level primitives', () => {
+  assert.throws(() => jsonToCsv('[{"a":1},2]'), /item 2 is a number/);
+  assert.throws(() => jsonToCsv('3'), /array or object/);
 });

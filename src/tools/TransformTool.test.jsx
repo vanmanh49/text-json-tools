@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import TransformTool, { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp, Regex } from './TransformTool.jsx';
+import TransformTool, { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp, Regex, Csv } from './TransformTool.jsx';
 import { textStore } from '../textStore.js';
 import { SAMPLES } from '../samples.js';
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
   cleanup();
-  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in', 're-in']) textStore.set(id, '');
+  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in', 're-in', 'csv-in']) textStore.set(id, '');
 });
 
 const err = c => c.querySelector('.err').textContent;
@@ -96,4 +96,12 @@ test('regex tester shows matches, then the replaced text', () => {
   expect(container.querySelector('#re-out').value).toBe('a# b#');
   fireEvent.change(container.querySelector('#re-pattern'), { target: { value: '(' } });
   expect(err(container)).toMatch(/Invalid regular expression/);
+});
+
+test('switching CSV direction keeps the input', () => {
+  const { container } = render(<Csv />);
+  act(() => textStore.set('csv-in', 'a\n1'));
+  fireEvent.change(container.querySelector('#csv-dir'), { target: { value: 'csv-to-json' } });
+  expect(container.querySelector('#csv-in').value).toBe('a\n1');
+  expect(container.querySelector('#csv-out').value).toBe('[\n  {\n    "a": "1"\n  }\n]');
 });

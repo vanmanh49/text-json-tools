@@ -12,7 +12,7 @@ A public, static website of browser-only utilities. The first five:
 3. **JSON Minify**: minify formatted JSON to one line.
 4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
 
-Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp, Hash and Regex Tester (fourteen tools in all).
+Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp, Hash, Regex Tester and JSON ⇄ CSV (fifteen tools in all).
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
 
@@ -138,6 +138,10 @@ Empty input to the three JSON tools returns `''` without an error.
   - `regexMatches(text, pattern, flags)` gives `{ count, matches }` as pretty JSON: every match is counted, the first 1000 (`MAX_MATCHES`) are listed as `{ match, index }` plus `groups` (numbered, unmatched → `null`) and `named` when the pattern has them. Empty matches are included. Without `g` only the first match is taken, as in JavaScript.
   - `regexReplace(text, pattern, flags, replacement)` is `String.prototype.replace`, so `$1`, `$<name>` and `$&` work.
   - A bad pattern or flag shows the browser's message on the error line. Empty text or pattern gives empty output. Known limit: a catastrophically backtracking pattern can hang the tab, as in search.
+- **JSON ⇄ CSV (`#csv`):** a Convert picker (JSON → CSV, CSV → JSON) and a Delimiter picker (Comma, Semicolon, Tab). The panel labels and file types follow the direction; switching keeps the input text.
+  - `jsonToCsv(s, delim)`: an array of objects gets a header of every key, first seen first, and a missing key is an empty cell. An array of arrays becomes rows with no header, an array of values one `value` column, and a single object one row. Strings are written as they are, `null` as empty, nested objects and arrays as JSON. A cell is quoted when it holds the delimiter, a quote or a line break, or starts or ends with whitespace; quotes inside are doubled. Lines end in LF. Mixing objects with other items, or a top-level value, gets a clear error.
+  - `csvToJson(s, delim)`: RFC 4180 (quoted fields may hold the delimiter, `""` and line breaks; LF or CRLF), a leading BOM is dropped and blank lines are skipped. The first row is the header; a blank name becomes `columnN` and a repeated one is an error. Every value stays a string (`007` stays `007`). A row with more fields than the header, or a quote that never closes, is an error naming the row; a shorter row is padded with empty strings.
+  - Known limit: cells starting with `=`, `+`, `-` or `@` are not escaped, so a spreadsheet may treat them as formulas; escaping would change the data.
 - **Async tools:** a `TransformTool` function may return a promise. The output is empty until it settles, and a result for text that has since changed is dropped, so a slow old result never replaces a newer one. A rejection's message goes to the error line.
 - **Compare as JSON:** a checkbox in the Compare toolbar.
   - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.

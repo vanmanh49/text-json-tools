@@ -3,7 +3,7 @@ import Panel from '../ui/Panel.jsx';
 import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
 import { setText } from '../setText.js';
-import { HASH_ALGOS, LINE_OPS, base64Decode, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
+import { CSV_DELIMS, HASH_ALGOS, LINE_OPS, base64Decode, csvToJson, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, jsonToCsv, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, regexMatches, regexReplace, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
 
 // One input panel, one output panel, and the tool's function between them.
 export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
@@ -176,5 +176,31 @@ export function Regex({ hidden }) {
   return (
     <TransformTool tab="regex" hidden={hidden} desc="Test a JavaScript regular expression: see each match and its groups, or the text after a replace ($1 and $<name> insert groups)."
       inId="re-in" inLabel="Text" inExt="txt" outId="re-out" outLabel={show === 'matches' ? 'Matches' : 'Replaced text'} outExt={show === 'matches' ? 'json' : 'txt'} fn={fn} toolbar={toolbar} />
+  );
+}
+
+export function Csv({ hidden }) {
+  const [dir, setDir] = useState('json-to-csv');
+  const [delim, setDelim] = useState(',');
+  const toCsv = dir === 'json-to-csv';
+  const fn = useCallback(s => (toCsv ? jsonToCsv(s, delim) : csvToJson(s, delim)), [toCsv, delim]);
+  const toolbar = (
+    <>
+      <label className="inline">Convert
+        <select id="csv-dir" value={dir} onChange={e => setDir(e.target.value)}>
+          <option value="json-to-csv">JSON → CSV</option>
+          <option value="csv-to-json">CSV → JSON</option>
+        </select>
+      </label>
+      <label className="inline">Delimiter
+        <select id="csv-delim" value={delim} onChange={e => setDelim(e.target.value)}>
+          {CSV_DELIMS.map(([d, label]) => <option key={label} value={d}>{label}</option>)}
+        </select>
+      </label>
+    </>
+  );
+  return (
+    <TransformTool tab="csv" hidden={hidden} desc="Turn a JSON array into CSV, or CSV with a header row into JSON. CSV values stay text, so 007 keeps its zeros."
+      inId="csv-in" inLabel={toCsv ? 'JSON' : 'CSV'} inExt={toCsv ? 'json' : 'csv'} outId="csv-out" outLabel={toCsv ? 'CSV' : 'JSON'} outExt={toCsv ? 'csv' : 'json'} fn={fn} toolbar={toolbar} />
   );
 }

@@ -534,3 +534,74 @@ export function regexReplace(text, pattern, flags, replacement) {
   if (!text || !pattern) return '';
   return text.replace(new RegExp(pattern, flags), replacement);
 }
+
+export const CSV_DELIMS = [[',', 'Comma'], [';', 'Semicolon'], ['\t', 'Tab']];
+const isObject = x => x !== null && typeof x === 'object' && !Array.isArray(x);
+const kind = x => (x === null ? 'null' : Array.isArray(x) ? 'array' : typeof x);
+
+// A JSON array of objects (header = every key, first seen first), of arrays (no header) or of values
+// (one "value" column), or a single object, as CSV with LF line ends.
+export function jsonToCsv(s, delim = ',') {
+  if (!s.trim()) return '';
+  const v = JSON.parse(s);
+  if (!isObject(v) && !Array.isArray(v)) throw new Error('CSV needs a JSON array or object.');
+  const rows = Array.isArray(v) ? v : [v];
+  if (!rows.length) return '';
+  const cell = x => {
+    const t = x == null ? '' : typeof x === 'object' ? JSON.stringify(x) : String(x);
+    return t.includes(delim) || /["\r\n]|^\s|\s$/.test(t) ? `"${t.replaceAll('"', '""')}"` : t;
+  };
+  // A line holding one empty cell is written "" so it isn't read back as a blank line.
+  const line = cells => cells.map(cell).join(delim) || '""';
+  if (rows.every(Array.isArray)) return rows.map(line).join('\n');
+  if (rows.every(x => !isObject(x) && !Array.isArray(x))) return ['value', ...rows].map(x => line([x])).join('\n');
+  const bad = rows.findIndex(x => !isObject(x));
+  if (bad >= 0) {
+    const k = kind(rows[bad]);
+    throw new Error(`Each item must be an object (item ${bad + 1} is ${/^[aeiou]/.test(k) ? 'an' : 'a'} ${k}).`);
+  }
+  const keys = [...new Set(rows.flatMap(Object.keys))];
+  return [line(keys), ...rows.map(r => line(keys.map(k => r[k])))].join('\n');
+}
+
+// RFC 4180 CSV with a header row → a JSON array of objects whose values are all strings (no number guessing:
+// "007" stays "007"). Handles quoted delimiters, "" and line breaks, LF or CRLF, a BOM, and skips blank lines.
+export function csvToJson(s, delim = ',') {
+  if (!s.trim()) return '';
+  const text = s.replace(/^﻿/, '');
+  const rows = [];
+  let row = [], field = '', quoted = false, inQuotes = false;
+  const endField = () => { row.push(field); field = ''; quoted = false; };
+  const endRow = () => {
+    const blank = !row.length && !field && !quoted;
+    endField();
+    if (!blank) rows.push(row);
+    row = [];
+  };
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c !== '"') field += c;
+      else if (text[i + 1] === '"') { field += '"'; i++; }
+      else inQuotes = false;
+    } else if (c === '"' && !field && !quoted) inQuotes = quoted = true;
+    else if (c === delim) endField();
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      endRow();
+    } else field += c; // a quote inside an unquoted field is kept as written
+  }
+  if (inQuotes) throw new Error(`Row ${rows.length + 1} has a quote that never closes.`);
+  endRow();
+  if (!rows.length) return '';
+  const header = rows[0].map((h, i) => h || `column${i + 1}`);
+  const seen = new Set();
+  for (const h of header) {
+    if (seen.has(h)) throw new Error(`Column name "${h}" appears twice.`);
+    seen.add(h);
+  }
+  return JSON.stringify(rows.slice(1).map((r, n) => {
+    if (r.length > header.length) throw new Error(`Row ${n + 2} has ${r.length} fields but the header has ${header.length}.`);
+    return Object.fromEntries(header.map((h, j) => [h, r[j] ?? '']));
+  }), null, 2);
+}
