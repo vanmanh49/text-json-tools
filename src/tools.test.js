@@ -1,6 +1,6 @@
-import { test } from 'vitest';
+import { test, vi } from 'vitest';
 import assert from 'node:assert/strict';
-import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime } from './tools.js';
+import { textToJson, jsonToText, minify, diffBlocks, applyCopy, jsonLines, linesText, splitSame, jsonStatus, errorLocation, formatSize, normalizeJson, decodeJwt, jwtTimeNotes, base64Encode, base64Decode, urlEncode, urlDecode, findAll, repairJson, qrSvg, uuids, UUID_VERSIONS, formatHtml, htmlPreview, hexEncode, hexDecode, htmlEscape, htmlUnescape, unicodeEscape, unicodeUnescape, lineTool, describeTime, hash, HASH_ALGOS } from './tools.js';
 import jsQR from 'jsqr';
 
 test('textToJson unescapes a quoted string', () => {
@@ -482,4 +482,19 @@ test('describeTime reads date text and says when it is local time', () => {
   assert.match(describeTime('2023-11-14 22:13:20'), /^Read as       date text \(local time/m);
   assert.match(describeTime('1700000000', 1699999940000), /^Relative      in 1 minute$/m);
   assert.throws(() => describeTime('soon'), /can read/);
+});
+
+test('hash gives lowercase hex SHA digests of UTF-8 text', async () => {
+  assert.equal(await hash('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+  assert.equal(await hash('abc', 'SHA-1'), 'a9993e364706816aba3e25717850c26c9cd0d89d');
+  assert.deepEqual(HASH_ALGOS, ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512']);
+});
+test('hash handles emoji as UTF-8 and empty input as empty', async () => {
+  const want = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode('😀'))), b => b.toString(16).padStart(2, '0')).join('');
+  assert.equal(await hash('😀', 'SHA-512'), want);
+  assert.equal(await hash(''), '');
+});
+test('hash explains a missing crypto.subtle', async () => {
+  vi.stubGlobal('crypto', {});
+  try { await assert.rejects(hash('x'), /https/); } finally { vi.unstubAllGlobals(); }
 });

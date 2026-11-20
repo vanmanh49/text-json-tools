@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp } from './TransformTool.jsx';
+import TransformTool, { TextToJson, JsonToText, Minify, Jwt, Encode, Timestamp } from './TransformTool.jsx';
 import { textStore } from '../textStore.js';
 import { SAMPLES } from '../samples.js';
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
   cleanup();
-  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in']) textStore.set(id, '');
+  for (const id of ['t2j-in', 'j2t-in', 'min-in', 'jwt-in', 'enc-in', 'lines-in', 'time-in', 'hash-in']) textStore.set(id, '');
 });
 
 const err = c => c.querySelector('.err').textContent;
@@ -68,4 +68,19 @@ test('timestamp Now fills the input', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Now' }));
   expect(container.querySelector('#time-in').value).toMatch(/^\d{10}$/);
   expect(container.querySelector('#time-out').value).toMatch(/^Read as {7}Unix seconds/);
+});
+
+test('async output ignores a stale result and shows a rejection', async () => {
+  const pending = {};
+  const fn = s => new Promise((res, rej) => { pending[s] = { res, rej }; });
+  const { container } = render(<TransformTool tab="t" inId="hash-in" inLabel="In" inExt="txt" outId="t-out" outLabel="Out" outExt="txt" fn={fn} />);
+  act(() => textStore.set('hash-in', 'a'));
+  act(() => textStore.set('hash-in', 'b'));
+  await act(async () => pending.b.res('B'));
+  await act(async () => pending.a.res('A'));
+  expect(container.querySelector('#t-out').value).toBe('B');
+  act(() => textStore.set('hash-in', 'c'));
+  await act(async () => pending.c.rej(new Error('boom')));
+  expect(err(container)).toBe('boom');
+  expect(container.querySelector('#t-out').value).toBe('');
 });

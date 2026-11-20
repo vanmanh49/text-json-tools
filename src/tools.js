@@ -249,7 +249,17 @@ function utf8(bytes) {
   catch { throw new Error("The decoded data isn't UTF-8 text (it may be an image or other binary file)."); }
 }
 
-export const hexEncode = s => Array.from(new TextEncoder().encode(s), b => b.toString(16).padStart(2, '0')).join('');
+const toHex = bytes => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+export const hexEncode = s => toHex(new TextEncoder().encode(s));
+
+export const HASH_ALGOS = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
+
+// Hex digest of the UTF-8 text. Whitespace is hashed like any other text; only '' gives ''.
+export async function hash(s, algo = 'SHA-256') {
+  if (!s) return '';
+  if (!globalThis.crypto?.subtle) throw new Error('Hashing needs the page to be opened over https.'); // plain-http pages have no crypto.subtle
+  return toHex(new Uint8Array(await crypto.subtle.digest(algo, new TextEncoder().encode(s))));
+}
 
 // Accepts whitespace, ':', ',' and '-' between bytes, 0x prefixes and either case.
 export function hexDecode(s) {

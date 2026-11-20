@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 export const NAV = [
   ['format', 'JSON Format', 'JSON'], ['minify', 'JSON Minify', 'JSON'], ['text-to-json', 'Text → JSON', 'JSON'], ['json-to-text', 'JSON → Text', 'JSON'],
   ['compare', 'Compare & Merge', 'Text'], ['html', 'HTML Format', 'Text'], ['lines', 'Line Tools', 'Text'],
-  ['encode', 'Encode / Decode', 'Encode'], ['jwt', 'JWT Decode', 'Encode'],
+  ['encode', 'Encode / Decode', 'Encode'], ['jwt', 'JWT Decode', 'Encode'], ['hash', 'Hash', 'Encode'],
   ['uuid', 'UUID', 'More'], ['qr', 'QR Code', 'More'], ['time', 'Timestamp', 'More'],
 ];
 export const GROUPS = [...new Set(NAV.map(n => n[2]))];

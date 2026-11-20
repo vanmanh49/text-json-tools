@@ -12,7 +12,7 @@ A public, static website of browser-only utilities. The first five:
 3. **JSON Minify**: minify formatted JSON to one line.
 4. **Compare & merge**: a WinMerge-style side-by-side line diff. You copy changes left or right one line or one block at a time.
 
-Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools and Timestamp (twelve tools in all).
+Added since, each described under UI: HTML Format, JWT Decode, Encode / Decode, QR Code, UUID, Line Tools, Timestamp and Hash (thirteen tools in all).
 
 Success: a user pastes input, gets correct output or a clear error, and copies the result. No data leaves the browser.
 
@@ -130,6 +130,11 @@ Empty input to the three JSON tools returns `''` without an error.
 - **Timestamp (`#time`):** a Timestamp or date panel → Converted panel, with a **Now** button that puts the current Unix seconds in the input.
   - `describeTime(s)`: digits only (optional `-` and decimals) is a Unix timestamp, read by size: below 1e11 seconds, below 1e14 milliseconds, below 1e17 microseconds, else nanoseconds. Anything else goes through `Date.parse`, so a date without a zone is local time. Unreadable input gets a clear error.
   - The output is one labelled line each: Read as (which reading was used), Unix seconds, Unix ms, ISO 8601, UTC, Local (the browser's locale and time zone) and Relative ("5 days ago", "in 2 hours").
+- **Hash (`#hash`):** an Algorithm picker (SHA-1, SHA-256 (default), SHA-384, SHA-512) over a Text panel → Hash (hex) panel.
+  - `hash(s, algo)` is async: the lowercase hex `crypto.subtle.digest` of the UTF-8 bytes. Whitespace is hashed like any text; only empty input gives empty output. Without `crypto.subtle` (a plain-http page) it says the page must be opened over https.
+  - MD5 (not in `crypto.subtle`) and HMAC are not offered.
+  - The Text box has `data-private` (it may hold passwords), so it is never written to browser storage.
+- **Async tools:** a `TransformTool` function may return a promise. The output is empty until it settles, and a result for text that has since changed is dropped, so a slow old result never replaces a newer one. A rejection's message goes to the error line.
 - **Compare as JSON:** a checkbox in the Compare toolbar.
   - Before diffing, Compare rewrites both sides with `normalizeJson` (keys A→Z, 2-space indent), so key order and formatting never show as differences.
   - The originals go on the undo stack.

@@ -21,6 +21,7 @@ export const SAMPLES = {
   'enc-in': 'Xin chào, thế giới! name=Ann Nguyen&tags=dev,ops',
   'lines-in': 'banana\nitem10\nApple\nitem2\nbanana\n  cherry  \n\nitem1\n',
   'time-in': String(nowSec),
+  'hash-in': 'Xin chào, thế giới!',
   'qr-in': 'https://example.com/?name=Ann Nguyễn',
   left: { left: CONFIG_A, right: CONFIG_B },
   right: { left: CONFIG_A, right: CONFIG_B },

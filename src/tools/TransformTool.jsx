@@ -3,16 +3,26 @@ import Panel from '../ui/Panel.jsx';
 import SearchBox from '../ui/SearchBox.jsx';
 import { useText } from '../textStore.js';
 import { setText } from '../setText.js';
-import { LINE_OPS, base64Decode, base64Encode, decodeJwt, describeTime, lineTool, hexDecode, hexEncode, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
+import { HASH_ALGOS, LINE_OPS, base64Decode, base64Encode, decodeJwt, describeTime, hash, lineTool, hexDecode, hexEncode, htmlEscape, htmlUnescape, jsonToText, jwtTimeNotes, minify, textToJson, unicodeEscape, unicodeUnescape, urlDecode, urlEncode } from '../tools.js';
 
 // One input panel, one output panel, and the tool's function between them.
 export default function TransformTool({ tab, hidden, desc, inId, inLabel, inExt, outId, outLabel, outExt, fn, toolbar, below }) {
   const input = useText(inId);
   const section = useRef(null);
   const [panelErr, setPanelErr] = useState(''); // clipboard, drop and fix messages from the panels
-  const result = useMemo(() => {
+  const sync = useMemo(() => {
     try { return { out: fn(input), error: '' }; } catch (e) { return { out: '', error: e.message }; }
   }, [fn, input]);
+  // An async fn returns a promise: show its result only while it is still the latest one.
+  const promise = typeof sync.out?.then === 'function' ? sync.out : null;
+  const [settled, setSettled] = useState(null);
+  useEffect(() => {
+    if (!promise) return;
+    let live = true;
+    promise.then(out => live && setSettled({ promise, out, error: '' }), e => live && setSettled({ promise, out: '', error: e.message }));
+    return () => { live = false; };
+  }, [promise]);
+  const result = !promise ? sync : settled?.promise === promise ? settled : { out: '', error: '' };
   useEffect(() => setPanelErr(''), [input]);
   // JSON input panels show parse errors (with line and column) in their status bar instead.
   const error = inExt === 'json' ? '' : result.error;
@@ -119,3 +129,19 @@ export const Timestamp = ({ hidden }) => (
     inId="time-in" inLabel="Timestamp or date" inExt="txt" outId="time-out" outLabel="Converted" outExt="txt" fn={describeTime}
     toolbar={<button id="time-now" type="button" onClick={() => setText('time-in', String(Math.floor(Date.now() / 1000)))}>Now</button>} />
 );
+
+export function Hash({ hidden }) {
+  const [algo, setAlgo] = useState('SHA-256');
+  const fn = useCallback(s => hash(s, algo), [algo]);
+  const toolbar = (
+    <label className="inline">Algorithm
+      <select id="hash-algo" value={algo} onChange={e => setAlgo(e.target.value)}>
+        {HASH_ALGOS.map(a => <option key={a} value={a}>{a}</option>)}
+      </select>
+    </label>
+  );
+  return (
+    <TransformTool tab="hash" hidden={hidden} desc="SHA-1, SHA-256, SHA-384 or SHA-512 hash of text, as UTF-8, computed in your browser. Text in this box is never saved."
+      inId="hash-in" inLabel="Text" inExt="txt" outId="hash-out" outLabel="Hash (hex)" outExt="txt" fn={fn} toolbar={toolbar} />
+  );
+}
