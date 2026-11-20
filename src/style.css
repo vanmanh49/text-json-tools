@@ -78,10 +78,14 @@ body {
   font: 600 14px/1 var(--mono); letter-spacing: -0.5px;
   padding: 6px 7px; border-radius: 6px; background: var(--accent); color: var(--accent-text);
 }
-nav { display: flex; gap: 2px; padding: 3px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
-nav a { padding: 5px 12px; border-radius: 6px; color: var(--muted); text-decoration: none; white-space: nowrap; font-size: 0.875rem; }
-nav a:hover { color: var(--text); }
-nav a[aria-current="page"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: 0 0 0 1px var(--border); }
+nav { display: flex; gap: 2px; padding: 3px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+nav summary {
+  cursor: pointer; padding: 5px 28px 5px 12px; border-radius: 6px; color: var(--muted); white-space: nowrap; font-size: 0.875rem;
+  background: var(--chevron) no-repeat right 9px center / 11px 11px;
+}
+nav summary:hover, nav details[open] > summary { color: var(--text); }
+nav summary.current { background-color: var(--panel); color: var(--text); font-weight: 600; box-shadow: 0 0 0 1px var(--border); }
+nav .tool-list { width: 230px; }
 .top-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
 .menu { position: relative; }
 .menu summary { list-style: none; }
@@ -106,10 +110,12 @@ nav a[aria-current="page"] { background: var(--panel); color: var(--text); font-
 }
 .tools-menu summary:hover { background-color: var(--hover); }
 .tools-menu[open] summary { border-color: var(--accent); }
-.tool-list { left: 0; right: auto; width: max(100%, 230px); gap: 2px; padding: 6px; }
+.tool-list { left: 0; right: auto; width: max(100%, 230px); gap: 2px; padding: 6px; max-height: calc(100vh - 80px); overflow-y: auto; }
 .tool-list a { padding: 9px 12px; border-radius: 6px; color: var(--text); text-decoration: none; font-size: 0.9rem; }
 .tool-list a:hover { background: var(--hover); }
 .tool-list a[aria-current="page"] { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+.tool-group { margin: 6px 12px 2px; color: var(--muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.tool-group:first-child { margin-top: 2px; }
 #clear-all.confirm { background: var(--error); border-color: var(--error); color: #fff; }
 
 /* Page */
@@ -334,20 +340,16 @@ body.app .pretty { min-height: 0; }
 .pretty .node.collapsed > .kids, .pretty .node.collapsed > .line:last-child { display: none; }
 .pretty .node.collapsed > .line:first-child .summary { display: inline; }
 
-/* The full tab strip needs about 1475 px (1250 px without the brand name); drop the brand name and theme text to keep it on laptops. */
-@media (min-width: 1251px) and (max-width: 1480px) {
-  .brand-name, #theme .label { display: none; }
-}
-/* Tablets: the tool picker replaces the strip, and panel buttons show icons only so two panels fit side by side. */
+/* Tablets: panel buttons show icons only so two panels fit side by side. */
 @media (max-width: 1250px) {
-  nav { display: none; }
-  .tools-menu { display: block; }
   .panel-head .icon-btn .label { display: none; }
   .panel-head .icon-btn.flashing .label { display: inline; }
 }
 
 /* Phones and narrow windows: stacked panels on a scrolling page */
 @media (max-width: 700px) {
+  nav { display: none; }
+  .tools-menu { display: block; }
   body.app { height: auto; }
   .topbar { gap: 10px; padding: 8px 16px; }
   .tools-menu { flex: 1; }

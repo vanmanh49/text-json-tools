@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { store, settings } from './store.js';
 import { textStore } from './textStore.js';
-import { NAV, useHashTab } from './useHashTab.js';
+import { GROUPS, NAV, useHashTab } from './useHashTab.js';
 import { IconButton } from './ui/IconButton.jsx';
 import { TextToJson, JsonToText, Minify, Jwt, Encode } from './tools/TransformTool.jsx';
 import FormatTool from './tools/FormatTool.jsx';
@@ -88,13 +88,27 @@ export default function App() {
             <span className="brand-name">Text &amp; JSON Tools</span>
           </a>
           <nav aria-label="Tools">
-          {NAV.map(([t, name]) => <a key={t} href={'#' + t} aria-current={tab === t ? 'page' : undefined}>{name}</a>)}
-        </nav>
-          {/* Narrow screens: the tab strip above is hidden and this picker takes its place. */}
+            {GROUPS.map(g => {
+              const tools = NAV.filter(n => n[2] === g);
+              const here = tools.some(([t]) => t === tab);
+              return (
+                <details key={g} className="menu group">
+                  <summary className={here ? 'current' : undefined}>{here ? toolName : g}</summary>
+                  <div className="menu-body tool-list">
+                    {tools.map(([t, name]) => <a key={t} href={'#' + t} aria-current={tab === t ? 'page' : undefined} onClick={e => { e.currentTarget.closest('details').open = false; }}>{name}</a>)}
+                  </div>
+                </details>
+              );
+            })}
+          </nav>
+          {/* Phones: the group menus above are hidden and this picker takes their place. */}
           <details className="menu tools-menu" ref={toolsMenu}>
             <summary aria-label={`Tool: ${toolName}. Choose a tool`}>{toolName}</summary>
             <div className="menu-body tool-list">
-              {NAV.map(([t, name]) => <a key={t} href={'#' + t} aria-current={tab === t ? 'page' : undefined} onClick={() => { toolsMenu.current.open = false; }}>{name}</a>)}
+              {GROUPS.map(g => [
+                <p key={g} className="tool-group">{g}</p>,
+                ...NAV.filter(n => n[2] === g).map(([t, name]) => <a key={t} href={'#' + t} aria-current={tab === t ? 'page' : undefined} onClick={() => { toolsMenu.current.open = false; }}>{name}</a>),
+              ])}
             </div>
           </details>
           <div className="top-actions">

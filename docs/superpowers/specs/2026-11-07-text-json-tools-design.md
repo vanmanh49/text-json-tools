@@ -126,8 +126,9 @@ Empty input to the three JSON tools returns `''` without an error.
   - The originals go on the undo stack.
   - An invalid side is named, with its line and column.
 - **Shell:**
-  - A top bar holds the `{ }` brand, the tool tabs as a segmented control, a theme switch (System → Light → Dark, remembered) and a ⚙ menu.
-  - The tabs need about 1340 px. From 1151 to 1400 px the brand name and the theme button's text are hidden so they still fit. At 1150 px and below (tablets) the tabs give way to a tool picker: a button showing the current tool's name that opens a list of every tool, with the current one highlighted; the brand name is back, and panel header buttons show icons only so two panels fit side by side. On phones (700 px and below) the brand name is hidden again and the picker fills the row. Picking a tool, a click outside or Escape closes it (Escape also for the ⚙ menu).
+  - A top bar holds the `{ }` brand, the tool group menus, a theme switch (System → Light → Dark, remembered) and a ⚙ menu.
+  - The tools are in four groups, `NAV`'s third field: JSON, Text, Encode and More. Above 700 px the top bar shows one menu per group; the menu of the current tool's group is highlighted and shows that tool's name, the others show the group name. Picking a tool closes its menu.
+  - At 700 px and below (phones) the group menus give way to a tool picker: a button showing the current tool's name that opens a list of every tool under group headings, with the current one highlighted. The list scrolls when it is taller than the screen. The brand name is hidden and the picker fills the row. From 1250 px down, panel header buttons show icons only so two panels fit side by side. Picking a tool, a click outside or Escape closes a menu (Escape also for the ⚙ menu).
   - The menu has "Remember my text in this browser" (on by default) and "Clear all panels", which needs a second click to confirm.
   - Format and the three JSON tools fill the screen (`body.app`), and their panels scroll inside. Compare scrolls the page.
   - Under 700px the panels stack and the tabs scroll sideways.

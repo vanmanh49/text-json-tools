@@ -24,7 +24,7 @@ There is no linter. Deploy: push to `main`; `.github/workflows/deploy.yml` runs 
 - **File map** (all under `src/`):
   - `main.jsx` calls `installGlobalListeners()` and renders `App`.
   - `App.jsx`: top bar, tabs, theme, settings menu (remember text, Clear all). Toggles `body.app` for every tool except Compare. That class makes the section fill the screen so its panels scroll inside; Compare scrolls the page because of its sticky toolbar and location bar. Focuses the first editable textarea of the tab when it opens.
-  - `useHashTab.js`: `NAV`, the one list of tabs and menu labels, and the current tab from `location.hash` (unknown or empty → `format`).
+  - `useHashTab.js`: `NAV`, the one list of tabs, menu labels and groups (`GROUPS`: JSON, Text, Encode, More; the top bar shows one menu per group), and the current tab from `location.hash` (unknown or empty → `format`).
   - `store.js`: the try/catch `store` helper around `localStorage`, `settings()`, `MAX_SAVE`.
   - `textStore.js`: the text of every editable panel, by textarea id (`EDITABLE_IDS`), with `useText(id)`, debounced saving and the "too large / not saved" notes.
   - `setText.js`: replaces a textarea's text so Cmd/Ctrl+Z can undo it.
